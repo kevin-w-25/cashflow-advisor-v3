@@ -154,6 +154,9 @@ function loadAllClients() {
   }
 }
 
+// 别名
+const getClients = loadAllClients;
+
 // ── 加载单个客户数据 ─────────────────────────
 function loadClientData(clientId) {
   try {
@@ -330,4 +333,41 @@ function clearAllData() {
     return true;
   }
   return false;
+}
+
+// ═══════════════════════════════════════════════════════════
+// 对账记录管理
+// ═══════════════════════════════════════════════════════════
+const STORAGE_KEY_RECON = 'cashflow_advisor_reconciliation';
+
+function getReconciliationRecords(clientId) {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY_RECON);
+    const records = data ? JSON.parse(data) : [];
+    return records.filter(r => r.clientId === clientId);
+  } catch (error) {
+    console.error('加载对账记录失败:', error);
+    return [];
+  }
+}
+
+function saveReconciliationRecord(record) {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY_RECON);
+    const records = data ? JSON.parse(data) : [];
+    
+    // 查找并更新现有记录，或添加新记录
+    const index = records.findIndex(r => r.clientId === record.clientId && r.month === record.month);
+    if (index >= 0) {
+      records[index] = record;
+    } else {
+      records.push(record);
+    }
+    
+    localStorage.setItem(STORAGE_KEY_RECON, JSON.stringify(records));
+    return true;
+  } catch (error) {
+    console.error('保存对账记录失败:', error);
+    return false;
+  }
 }

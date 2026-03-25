@@ -64,7 +64,9 @@ function calcScores(d) {
   sc.emergency = cl(d.emergencyCoverage * 20, 0, 20);
   sc.savings = cl(d.savingsRate * 100 > 20 ? 20 : d.savingsRate * 100, 0, 20);
   sc.debt = cl(d.debtRatio < 0.15 ? 20 : d.debtRatio < 0.3 ? 15 : d.debtRatio < 0.5 ? 8 : 2, 0, 20);
-  sc.passive = cl(d.passiveRatio * 40, 0, 20);
+  // 被动收入评分：被动收入占总收入的比例 → 20分满分
+  // 20%被动收入=4分，40%=8分，60%=12分，80%=16分，100%=20分
+  sc.passive = cl(d.passiveRatio * 20, 0, 20);
   const nz = [d.cash, d.savingsPlan, d.trust, d.property, d.stocks, d.gold].filter(x => x > 0).length;
   sc.diversify = cl(nz * 3.5, 0, 20);
   sc.total = Math.round(Object.values(sc).reduce((a, b) => a + b, 0));
@@ -72,6 +74,15 @@ function calcScores(d) {
   sc.color = sc.total >= 80 ? 'var(--green)' : sc.total >= 60 ? 'var(--gold)' : 'var(--red)';
   return sc;
 }
+
+// 评分标准说明
+const SCORE_CRITERIA = {
+  emergency: { max: 20, criteria: '紧急预备金覆盖月数 × 20分（6个月=满分）' },
+  savings: { max: 20, criteria: '储蓄率% 直接计分（20%=满分）' },
+  debt: { max: 20, criteria: '负债率 <15%=20分，<30%=15分，<50%=8分' },
+  passive: { max: 20, criteria: '被动收入占比 × 20分（50%=满分）' },
+  diversify: { max: 20, criteria: '资产种类数 × 3.5分（6类=满分）' }
+};
 
 
 // ── 衍生数据计算 ──────────────────────────────
@@ -400,43 +411,66 @@ function drawScoreCanvas(canvasId, score) {
   ctx.strokeStyle = gr; ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.stroke();
 }
 
-// ── 目标资产配置模型 ───────────────────────────
+// ── 目标资产配置模型 ─────────────────────────────────────────────
+// 基于双层框架：四大账户 + 风险偏好微调 + 年龄调整
 function getTargetAllocation(riskPref, age, yearsToRetire) {
-  // 基于 Harry Browne 永久组合 + 达利欧全天候 + 段永平本分理念的融合
-  const models = {
-    // Harry Browne 永久组合：25%股票 25%国债 25%黄金 25%现金 - 极端稳健
-    permanent: { cash: 25, savingsPlan: 0, trust: 0, property: 0, stocks: 25, gold: 25, bonds: 25 },
-    // 达利欧全天候：30%股票 40%长期国债 15%中期国债 7.5%黄金 7.5%大宗商品 - 风险平价
-    allWeather: { cash: 0, savingsPlan: 15, trust: 0, property: 10, stocks: 30, gold: 15, bonds: 30 },
-    // 段永平本分策略：能力圈内集中投资 + 安全边际 + 长期持有
-    benfen: { cash: 10, savingsPlan: 20, trust: 15, property: 15, stocks: 30, gold: 5, bonds: 5 },
-  };
+  // 获取对应风险偏好的大师配置
+  const wisdom = wisdomData[riskPref] || wisdomData.moderate;
   
-  // 根据风险偏好和年龄调整
-  let target = {};
-  const timeHorizon = yearsToRetire || 20;
+  // 从大师配置获取基础比例
+  let target = { ...wisdom.allocation };
   
-  if (riskPref === 'conservative' || age > 55) {
-    // 保守型：偏向永久组合 + 更多保险
-    target = { cash: 15, savingsPlan: 30, trust: 10, property: 10, stocks: 15, gold: 10, bonds: 10 };
-  } else if (riskPref === 'moderate') {
-    // 稳健型：全天候组合改良版
-    target = { cash: 10, savingsPlan: 25, trust: 10, property: 10, stocks: 25, gold: 10, bonds: 10 };
-  } else if (riskPref === 'growth') {
-    // 成长型：本分策略 + 增长空间
-    target = { cash: 8, savingsPlan: 20, trust: 12, property: 10, stocks: 35, gold: 5, bonds: 10 };
-  } else {
-    // 激进型：高权益配置
-    target = { cash: 5, savingsPlan: 15, trust: 10, property: 10, stocks: 45, gold: 5, bonds: 10 };
+  // 年龄微调规则
+  if (age < 40) {
+    // 年轻人：可承受更多风险，生钱的钱 +5%，保值的钱 -5%
+    target.stocks += 5;
+    target.bonds -= 3;
+    target.gold -= 2;
+  } else if (age > 60) {
+    // 临近退休：降低风险，保值的钱 +10%，生钱的钱 -10%
+    target.stocks -= 10;
+    target.bonds += 6;
+    target.gold += 4;
+  } else if (age > 50) {
+    // 中年后期：逐步降低风险，保值的钱 +5%，生钱的钱 -5%
+    const adjust = Math.min(10, (age - 50) * 0.5);
+    target.stocks = Math.max(15, target.stocks - adjust);
+    target.bonds += adjust * 0.6;
+    target.gold += adjust * 0.4;
   }
   
-  // 年龄调整：随着年龄增长降低风险资产
-  if (age > 50) {
-    target.stocks = Math.max(15, target.stocks - (age - 50) * 0.5);
-    target.savingsPlan += (age - 50) * 0.3;
+  // 确保总和为100%（四舍五入微调）
+  const total = Object.values(target).reduce((a, b) => a + b, 0);
+  if (Math.abs(total - 100) > 0.1) {
+    const diff = 100 - total;
+    // 将差额调整到现金
+    target.cash = Math.max(1, target.cash + diff);
   }
   
   return target;
+}
+
+// ── 获取四大账户配置 ─────────────────────────────────────────────
+function getFourAccounts(riskPref, age) {
+  const wisdom = wisdomData[riskPref] || wisdomData.moderate;
+  const accounts = { ...wisdom.accounts };
+  
+  // 年龄微调
+  if (age < 40) {
+    accounts.spending = Math.max(5, accounts.spending - 2);
+    accounts.growth = Math.min(50, accounts.growth + 5);
+    accounts.preservation = Math.max(30, accounts.preservation - 3);
+  } else if (age > 60) {
+    accounts.spending = Math.max(3, accounts.spending - 2);
+    accounts.growth = Math.max(20, accounts.growth - 10);
+    accounts.preservation = Math.min(55, accounts.preservation + 12);
+  } else if (age > 50) {
+    const adjust = Math.min(5, (age - 50) * 0.5);
+    accounts.growth = Math.max(20, accounts.growth - adjust);
+    accounts.preservation = Math.min(50, accounts.preservation + adjust);
+  }
+  
+  return accounts;
 }
 
 // ── 计算资产配置偏差 ───────────────────────────
@@ -444,27 +478,33 @@ function calcAllocationDrift(d) {
   const target = getTargetAllocation(d.riskPref, d.age, d.yearsToRetire);
   const total = d.totalAssets || 1;
   
+  // 计算所有资产类型的当前占比
   const current = {
     cash: ((d.cash || 0) / total) * 100,
+    moneyFund: ((d.moneyFund || 0) / total) * 100,
     savingsPlan: ((d.savingsPlan || 0) / total) * 100,
+    bonds: ((d.bonds || 0) / total) * 100,
+    stocks: ((d.stocks || 0) / total) * 100,
     trust: ((d.trust || 0) / total) * 100,
     property: ((d.property || 0) / total) * 100,
-    stocks: ((d.stocks || 0) / total) * 100,
     gold: ((d.gold || 0) / total) * 100,
+    alternatives: ((d.alternatives || 0) / total) * 100,
+    otherInvest: ((d.otherInvest || 0) / total) * 100,
   };
+  
+  // 计算所有资产的总和（应为100%）
+  const displayedTotal = Object.values(current).reduce((a, b) => a + b, 0);
   
   const drift = {};
   Object.keys(target).forEach(k => {
-    if (k !== 'bonds') { // bonds 合并到 savingsPlan 显示
-      drift[k] = {
-        current: current[k] || 0,
-        target: target[k],
-        diff: (current[k] || 0) - target[k],
-      };
-    }
+    drift[k] = {
+      current: current[k] || 0,
+      target: target[k],
+      diff: (current[k] || 0) - target[k],
+    };
   });
   
-  return { target, current, drift };
+  return { target, current, drift, displayedTotal };
 }
 
 // ── 生成调仓建议 ──────────────────────────────
@@ -473,23 +513,34 @@ function genRebalanceAdvice(drift, total, currency, currentAssets) {
   const c = currency || 'USD';
   const fmtPct = function(n) { return n.toFixed(1) + '%'; };
   
-  // 隐藏信托和房产的建议（用户不希望建议这两类）
-  const hiddenAssets = ['trust', 'property'];
+  // 无目标配置的资产类型（不生成调仓建议，只在已有时显示）
+  const noTargetAssets = ['trust', 'property', 'alternatives', 'otherInvest'];
+  
+  // 资产名称映射
+  const assetNameMap = {
+    cash: '流动现金',
+    moneyFund: '货币基金',
+    savingsPlan: '储蓄保险',
+    bonds: '债券基金',
+    stocks: '股票基金',
+    gold: '黄金',
+    trust: '信托资产',
+    property: '房产',
+    alternatives: '私募基金',
+    otherInvest: '其他投资'
+  };
   
   Object.entries(drift).forEach(function(entry) {
     const asset = entry[0];
     const data = entry[1];
     
-    // 跳过隐藏的资产类别
-    if (hiddenAssets.includes(asset)) return;
+    // 跳过无目标配置的资产类别
+    if (noTargetAssets.includes(asset)) return;
     
     if (Math.abs(data.diff) > 5) {
       const action = data.diff > 0 ? '减持' : '增持';
       const amount = Math.abs(data.diff / 100 * total);
-      const assetName = {
-        cash: '流动现金', savingsPlan: '储蓄保险', trust: '信托资产',
-        property: '房产', stocks: '股票基金', gold: '黄金'
-      }[asset];
+      const assetName = assetNameMap[asset] || asset;
       
       advices.push({
         asset: asset,
@@ -504,35 +555,85 @@ function genRebalanceAdvice(drift, total, currency, currentAssets) {
   return advices.sort(function(a, b) { return Math.abs(b.amount) - Math.abs(a.amount); });
 }
 
-// ── 智慧参考数据 ──────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// 投资大师智慧配置体系
+// 双层框架：四大账户 + 风险偏好微调
+// 资产映射：cash=现金, moneyFund=货币基金, savingsPlan=储蓄险, bonds=债券基金, stocks=股票基金, gold=黄金
+// ═══════════════════════════════════════════════════════════════
+
+// 四大账户配置（基础比例）
+const fourAccounts = {
+  // 要花的钱：满足9-12个月日常支出
+  spending: {
+    name: '要花的钱',
+    desc: '满足9-12个月日常支出，流动性第一',
+    assets: ['cash', 'moneyFund'],
+    baseRatio: 10
+  },
+  // 保命的钱：风险保障
+  protection: {
+    name: '保命的钱',
+    desc: '风险保障，以小博大',
+    assets: ['savingsPlan'],
+    baseRatio: 20
+  },
+  // 生钱的钱：追求收益，风险资产
+  growth: {
+    name: '生钱的钱',
+    desc: '追求收益，承担可控风险',
+    assets: ['stocks'],
+    baseRatio: 30
+  },
+  // 保值的钱：稳健增值
+  preservation: {
+    name: '保值的钱',
+    desc: '稳健增值，保本为先',
+    assets: ['savingsPlan', 'bonds', 'gold'],
+    preservationRatio: 0.2, // 保值账户中20%放储蓄险，80%放债券+黄金
+    baseRatio: 40
+  }
+};
+
+// 大师智慧配置
 const wisdomData = {
-  permanent: {
-    name: 'Harry Browne 永久组合',
-    author: 'Harry Browne',
+  conservative: {
+    master: 'Harry Browne',
+    name: '永久组合',
     period: '1970s-2000s',
-    allocation: { stocks: 25, bonds: 25, gold: 25, cash: 25 },
-    principle: '无论经济处于繁荣、衰退、通胀或通缩，至少有一个资产类别表现良好',
-    core: '简单、被动、防御性',
     quote: '在任何经济环境下保护你的财富',
+    principle: '无论经济处于繁荣、衰退、通胀或通缩，至少有一个资产表现良好。简单、被动、防御性',
+    // 四大账户比例
+    accounts: { spending: 12, protection: 22, growth: 18, preservation: 48 },
+    // 6资产配置（总计100%）
+    allocation: { cash: 8, moneyFund: 4, savingsPlan: 32, bonds: 27, stocks: 18, gold: 11 }
   },
-  allWeather: {
-    name: '达利欧全天候策略',
-    author: 'Ray Dalio',
+  moderate: {
+    master: 'Ray Dalio',
+    name: '全天候策略',
     period: '1996-至今',
-    allocation: { stocks: 30, longBonds: 40, midBonds: 15, gold: 7.5, commodities: 7.5 },
-    principle: '风险平价——让不同资产对组合风险的贡献相等',
-    core: '经济四季理论 + 债务周期',
-    quote: '投资的圣杯是找到15个或更多良好的、互不相关的回报流',
+    quote: '投资的圣杯是找到15个良好的、互不相关的回报流',
+    principle: '风险平价，让不同资产对组合风险的贡献相等。基于经济四季理论和债务周期',
+    accounts: { spending: 10, protection: 20, growth: 30, preservation: 40 },
+    allocation: { cash: 6, moneyFund: 4, savingsPlan: 28, bonds: 22, stocks: 28, gold: 12 }
   },
-  benfen: {
-    name: '段永平本分投资',
-    author: '段永平',
-    period: '2000s-至今',
-    allocation: null,
-    principle: '做对的事情，把事情做对。能力圈 + 安全边际 + 长期持有',
-    core: '本分、平常心、Stop Doing List',
-    quote: '不懂不做，不熟不做。投资最重要的是不亏钱',
+  growth: {
+    master: 'Benjamin Graham',
+    name: '价值投资',
+    period: '1970s-至今',
+    quote: '投资最重要的是不亏钱',
+    principle: '安全边际、内在价值、长期持有。只买价格低于内在价值30%以上的标的',
+    accounts: { spending: 8, protection: 18, growth: 38, preservation: 36 },
+    allocation: { cash: 5, moneyFund: 3, savingsPlan: 25, bonds: 20, stocks: 35, gold: 12 }
   },
+  aggressive: {
+    master: 'John Bogle',
+    name: '指数基金',
+    period: '1974-至今',
+    quote: '在长期，复利是王者，低费率是大臣',
+    principle: '低成本、分散化、长期持有。选择费率最低的指数基金，定期定投，不择时',
+    accounts: { spending: 5, protection: 15, growth: 48, preservation: 32 },
+    allocation: { cash: 3, moneyFund: 2, savingsPlan: 25, bonds: 18, stocks: 45, gold: 7 }
+  }
 };
 
 // ── 生成行动清单 ──────────────────────────────

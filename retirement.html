@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>现金流规划助手 · 退休规划</title>
+<link rel="stylesheet" href="assets/style.css"/>
+<style>
+/* 退休规划专用样式 */
+.retire-section { margin-bottom: 24px; }
+.retire-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.retire-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.retire-card { padding: 16px; background: var(--dark3); border-radius: 12px; }
+.retire-card-title { font-size: 12px; font-weight: 600; color: var(--gold); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+
+/* 情景切换器 */
+.scenario-tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+.scenario-tab { padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; background: var(--dark3); color: var(--text2); border: none; transition: all 0.2s; }
+.scenario-tab:hover { background: var(--dark2); }
+.scenario-tab.active { background: var(--gold); color: #000; font-weight: 600; }
+
+/* 结果卡片 */
+.result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.result-badge { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.badge-green { background: rgba(76,175,80,0.2); color: #4CAF50; }
+.badge-yellow { background: rgba(255,193,7,0.2); color: #FFC107; }
+.badge-red { background: rgba(244,67,54,0.2); color: #F44336; }
+
+/* 时间轴 */
+.timeline-container { overflow-x: auto; padding: 16px 0; }
+.timeline { display: flex; gap: 2px; min-width: max-content; }
+.timeline-bar { width: 40px; display: flex; flex-direction: column; align-items: center; }
+.timeline-year { font-size: 10px; color: var(--text2); margin-bottom: 4px; }
+.timeline-block { width: 36px; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #fff; }
+.timeline-block.work { background: var(--blue); }
+.timeline-block.retire { background: var(--gold); }
+.timeline-block.depleted { background: var(--red); }
+
+/* 对比表 */
+.compare-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.compare-table th { padding: 10px 12px; text-align: left; background: var(--dark3); color: var(--gold); font-weight: 600; border-bottom: 1px solid var(--border); }
+.compare-table td { padding: 10px 12px; border-bottom: 1px solid var(--border2); }
+.compare-table tr:hover td { background: rgba(201,168,76,0.05); }
+.compare-highlight { color: var(--gold); font-weight: 600; }
+.negative-val { color: var(--red); }
+.positive-val { color: #4CAF50; }
+
+/* 医疗费用数据 */
+.data-source { font-size: 10px; color: var(--text2); margin-top: 8px; padding: 8px; background: var(--dark3); border-radius: 6px; }
+.data-source strong { color: var(--text); }
+
+/* 敏感度分析 */
+.sensitivity-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.sensitivity-item { padding: 12px; background: var(--dark3); border-radius: 8px; text-align: center; }
+.sensitivity-value { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.sensitivity-label { font-size: 11px; color: var(--text2); }
+
+/* 进度条 */
+.progress-bar-container { background: var(--dark3); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+.progress-bar-label { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; }
+.progress-bar { height: 8px; background: var(--dark2); border-radius: 4px; overflow: hidden; }
+.progress-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.progress-fill-green { background: linear-gradient(90deg, #4CAF50, #81C784); }
+.progress-fill-yellow { background: linear-gradient(90deg, #FFC107, #FFD54F); }
+.progress-fill-red { background: linear-gradient(90deg, #F44336, #E57373); }
+
+/* 建议卡片 */
+.advice-card { padding: 14px; background: rgba(201,168,76,0.08); border: 1px solid rgba(201,168,76,0.2); border-radius: 10px; margin-bottom: 12px; }
+.advice-card.warning { background: rgba(244,67,54,0.08); border-color: rgba(244,67,54,0.2); }
+.advice-title { font-size: 12px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+
+/* 图表容器 */
+.chart-container { background: var(--dark3); border-radius: 12px; padding: 16px; margin-top: 16px; }
+.chart-canvas { width: 100%; height: 280px; }
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .retire-grid-3, .sensitivity-grid { grid-template-columns: 1fr; }
+  .scenario-tabs { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-brand" href="index.html">
+    <div class="nav-logo">💎</div>
+    <span class="nav-title">现金流规划助手</span>
+  </a>
+  <div class="nav-links">
+    <a class="nav-link" data-page="index" href="index.html">🏠 首页</a>
+    <a class="nav-link" data-page="clients" href="clients.html">📋 客户档案</a>
+    <a class="nav-link" data-page="comparison" href="comparison.html">📈 历史对比</a>
+    <a class="nav-link" data-page="planner" href="planner.html">📊 开始分析</a>
+    <a class="nav-link" data-page="monthly" href="monthly.html">📅 月度对账</a>
+    <a class="nav-link" data-page="scenarios" href="scenarios.html">🔮 场景模拟</a>
+    <a class="nav-link active" href="retirement.html">🏖️ 退休规划</a>
+    <a class="nav-link" href="portfolio.html">📊 投资组合</a>
+    <a class="nav-link" href="insurance.html">🛡️ 保险分析</a>
+  </div>
+</nav>
+
+<div class="main" style="max-width:1100px">
+
+  <div class="page-header">
+    <div class="page-title">🏖️ 退休规划</div>
+    <div class="page-sub">多情景分析 · 通胀敏感度 · 医疗费用规划</div>
+  </div>
+
+  <!-- 客户选择 -->
+  <div class="card gb" style="margin-bottom:20px">
+    <div class="frow">
+      <div class="fg">
+        <label>选择客户档案</label>
+        <select id="sel-client">
+          <option value="">— 选择已有客户（加载当前数据）—</option>
+        </select>
+      </div>
+      <div class="fg" style="align-self:flex-end">
+        <button class="btn btn-gold" onclick="loadClientProfile()">📥 加载数据</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 基本参数 -->
+  <div class="card gb retire-section">
+    <div class="card-title"><span class="ico">⚙️</span> 基本参数</div>
+    <div class="retire-grid">
+      <div class="fg">
+        <label>当前年龄（岁）</label>
+        <div class="unit">
+          <input type="number" id="inp-age" value="40" min="18" max="70"/>
+          <span class="uf">岁</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label>计划退休年龄（岁）</label>
+        <div class="unit">
+          <input type="number" id="inp-retire-age" value="60" min="50" max="75"/>
+          <span class="uf">岁</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label>预期寿命（岁）</label>
+        <select id="inp-life-exp">
+          <option value="75">75岁</option>
+          <option value="80">80岁</option>
+          <option value="85" selected>85岁（默认）</option>
+          <option value="90">90岁</option>
+          <option value="95">95岁</option>
+          <option value="100">100岁</option>
+        </select>
+        <div class="field-tip">按5年为单位，长寿风险规划</div>
+      </div>
+      <div class="fg">
+        <label>当前年度总收入</label>
+        <div class="unit">
+          <span class="uf">¥</span>
+          <input type="number" id="inp-annual-income" value="500000" min="0" step="10000"/>
+        </div>
+      </div>
+    </div>
+    <div class="retire-grid" style="margin-top:12px">
+      <div class="fg">
+        <label>当前总资产</label>
+        <div class="unit">
+          <span class="uf">¥</span>
+          <input type="number" id="inp-total-assets" value="2000000" min="0" step="100000"/>
+        </div>
+      </div>
+      <div class="fg">
+        <label>当前年度总支出</label>
+        <div class="unit">
+          <span class="uf">¥</span>
+          <input type="number" id="inp-annual-expense" value="300000" min="0" step="10000"/>
+        </div>
+        <div class="field-tip">含必要、弹性、高端消费、负债还款</div>
+      </div>
+      <div class="fg">
+        <label>退休后年度基础支出</label>
+        <div class="unit">
+          <span class="uf">¥</span>
+          <input type="number" id="inp-retire-expense" value="240000" min="0" step="10000"/>
+        </div>
+        <div class="field-tip">仅含必要+弹性支出（不含高端消费、负债）</div>
+      </div>
+      <div class="fg">
+        <label>年度储蓄能力</label>
+        <div class="unit">
+          <span class="uf">¥</span>
+          <input type="number" id="inp-annual-savings" value="200000" min="0" step="10000"/>
+        </div>
+        <div class="field-tip">退休前每年可储蓄金额</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 退休生活期望 -->
+  <div class="card gb retire-section">
+    <div class="card-title"><span class="ico">🏡</span> 退休生活期望</div>
+    <div class="retire-grid">
+      <div class="fg">
+        <label>期望退休生活水平</label>
+        <select id="inp-lifestyle">
+          <option value="0.6">基础生活（当前支出的60%）</option>
+          <option value="0.8" selected>维持现状（当前支出的80%）</option>
+          <option value="1.0">保持品质（当前支出100%）</option>
+          <option value="1.2">提升享受（当前支出的120%）</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>退休后是否有其他收入</label>
+        <div class="unit">
+          <span class="uf">¥</span>
+          <input type="number" id="inp-other-income" value="0" min="0" step="10000"/>
+        </div>
+        <div class="field-tip">如租金、兼职等（月均）</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 医疗护理规划 -->
+  <div class="card gb retire-section">
+    <div class="card-title"><span class="ico">🏥</span> 医疗护理费用规划</div>
+    <div class="retire-grid">
+      <div class="fg">
+        <label>退休后医疗费用系数</label>
+        <select id="inp-medical-factor">
+          <option value="1.0">基准（与工作期持平）</option>
+          <option value="1.5">轻度增加（1.5倍）</option>
+          <option value="2.0" selected>中度增加（2倍）</option>
+          <option value="3.0">重度增加（3倍）</option>
+          <option value="4.0">考虑慢性病（4倍）</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>是否考虑护理费用</label>
+        <select id="inp-care-need">
+          <option value="none">不考虑护理费用</option>
+          <option value="family" selected>家庭护理（自担成本）</option>
+          <option value="community">社区养老（约5,000-10,000元/月）</option>
+          <option value="nursing">专业护理院（约10,000-25,000元/月）</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>护理费用开始年龄</label>
+        <div class="unit">
+          <input type="number" id="inp-care-start-age" value="80" min="60" max="100"/>
+          <span class="uf">岁</span>
+        </div>
+      </div>
+    </div>
+    <div class="data-source">
+      <strong>📊 数据依据：</strong><br/>
+      • 中国2023年城镇职工年均医疗费用：约15,000元/年（医保局数据）<br/>
+      • 60岁以上医疗支出：约为在职人员的2-3倍（国家卫健委）<br/>
+      • 护理院费用参考：一线城市约8,000-25,000元/月，二三线城市约4,000-12,000元/月<br/>
+      • 数据来源：国家医疗保障局、国家卫生健康委员会、各省市民政部门统计数据
+    </div>
+  </div>
+
+  <!-- 投资与通胀假设 -->
+  <div class="card gb retire-section">
+    <div class="card-title"><span class="ico">📈</span> 投资与通胀假设</div>
+    <div class="scenario-tabs">
+      <button class="scenario-tab active" onclick="setInflationScenario('low')">🌱 乐观情景<br/><small>低通胀2%</small></button>
+      <button class="scenario-tab" onclick="setInflationScenario('medium')">☀️ 基准情景<br/><small>中性通胀3%</small></button>
+      <button class="scenario-tab" onclick="setInflationScenario('high')">⚠️ 保守情景<br/><small>高通胀5%</small></button>
+    </div>
+    <div class="retire-grid">
+      <div class="fg">
+        <label>年通货膨胀率</label>
+        <div class="unit">
+          <input type="number" id="inp-inflation" value="3" min="0" max="10" step="0.5"/>
+          <span class="uf">%</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label>退休前投资年化收益率</label>
+        <div class="unit">
+          <input type="number" id="inp-pre-return" value="6" min="0" max="15" step="0.5"/>
+          <span class="uf">%</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label>退休后投资年化收益率</label>
+        <div class="unit">
+          <input type="number" id="inp-post-return" value="4" min="0" max="10" step="0.5"/>
+          <span class="uf">%</span>
+        </div>
+        <div class="field-tip">退休后偏保守，4%为经典取款率</div>
+      </div>
+    </div>
+    <div class="retire-grid" style="margin-top:12px">
+      <div class="retire-card">
+        <div class="retire-card-title">🌱 乐观情景 - 低通胀</div>
+        <p style="font-size:11px;color:var(--text2);line-height:1.6">
+          通胀率 2%，经济稳健增长<br/>
+          适合：经济繁荣期、良性通胀环境
+        </p>
+      </div>
+      <div class="retire-card">
+        <div class="retire-card-title">☀️ 基准情景 - 中性通胀</div>
+        <p style="font-size:11px;color:var(--text2);line-height:1.6">
+          通胀率 3%，符合历史平均水平<br/>
+          适合：常规规划、稳健方案
+        </p>
+      </div>
+      <div class="retire-card">
+        <div class="retire-card-title">⚠️ 保守情景 - 高通胀</div>
+        <p style="font-size:11px;color:var(--text2);line-height:1.6">
+          通胀率 5%，考虑极端情况<br/>
+          适合：抗风险规划、安全边际
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 计算按钮 -->
+  <div style="display:flex;justify-content:center;gap:12px;margin:24px 0">
+    <button class="btn btn-gold btn-lg" onclick="calculateRetirement()">📊 开始退休规划分析</button>
+    <button class="btn btn-outline" onclick="resetForm()">🔄 重置</button>
+  </div>
+
+  <!-- 核心结果 -->
+  <div id="result-core" style="display:none" class="card gb retire-section">
+    <div class="card-title"><span class="ico">🎯</span> 核心结果</div>
+    <div class="sensitivity-grid" style="margin-bottom:20px">
+      <div class="sensitivity-item">
+        <div class="sensitivity-value" id="res-years-to-retire">20</div>
+        <div class="sensitivity-label">距退休年数</div>
+      </div>
+      <div class="sensitivity-item">
+        <div class="sensitivity-value" id="res-retire-years">25</div>
+        <div class="sensitivity-label">退休生活年数</div>
+      </div>
+      <div class="sensitivity-item">
+        <div class="sensitivity-value" id="res-total-need">¥12,500,000</div>
+        <div class="sensitivity-label">退休资金总需求</div>
+      </div>
+    </div>
+    
+    <div class="retire-grid">
+      <div class="progress-bar-container">
+        <div class="progress-bar-label">
+          <span>退休准备度</span>
+          <span id="res-readiness-pct">65%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-bar-fill progress-fill-yellow" id="res-readiness-bar" style="width:65%"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">
+          现有资产覆盖 <span id="res-coverage">¥1,200,000</span> / 需求 <span id="res-target">¥12,500,000</span>
+        </div>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar-label">
+          <span>每月可投入退休基金</span>
+          <span id="res-monthly-save">¥16,667</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-bar-fill progress-fill-green" style="width:100%"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">
+          距退休还有 <span id="res-years-left">20</span> 年积累期
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 多情景对比 -->
+  <div id="result-comparison" style="display:none" class="card gb retire-section">
+    <div class="card-title"><span class="ico">⚖️</span> 多情景对比分析</div>
+    <div class="timeline-container">
+      <div class="timeline" id="timeline-chart"></div>
+    </div>
+    <table class="compare-table" style="margin-top:16px">
+      <thead>
+        <tr>
+          <th>情景</th>
+          <th>通胀率</th>
+          <th>退休资金需求</th>
+          <th>资金耗尽年龄</th>
+          <th>风险评估</th>
+        </tr>
+      </thead>
+      <tbody id="comparison-tbody">
+      </tbody>
+    </table>
+    <div class="data-source" style="margin-top:12px">
+      <strong>💡 分析说明：</strong>不同通胀情景下退休资金需求差异显著。保守情景（5%通胀）下，30年后同等生活水平所需资金约为基准情景的2.4倍。建议以保守情景作为最低规划目标。
+    </div>
+  </div>
+
+  <!-- 医疗护理费用详细 -->
+  <div id="result-medical" style="display:none" class="card gb retire-section">
+    <div class="card-title"><span class="ico">🏥</span> 医疗护理费用详细规划</div>
+    <div class="retire-grid">
+      <div class="retire-card">
+        <div class="retire-card-title">💊 医疗费用（按年龄阶段）</div>
+        <table class="compare-table" style="margin-top:8px">
+          <thead>
+            <tr><th>年龄段</th><th>年均医疗费</th><th>累计</th></tr>
+          </thead>
+          <tbody id="medical-table-body">
+          </tbody>
+        </table>
+      </div>
+      <div class="retire-card">
+        <div class="retire-card-title">🛡️ 护理费用（按护理类型）</div>
+        <div id="care-detail" style="margin-top:8px;font-size:12px;color:var(--text2);line-height:1.8">
+        </div>
+      </div>
+    </div>
+    <div class="sensitivity-grid" style="margin-top:16px">
+      <div class="sensitivity-item">
+        <div class="sensitivity-value" id="res-medical-total">¥1,850,000</div>
+        <div class="sensitivity-label">退休后医疗总费用</div>
+      </div>
+      <div class="sensitivity-item">
+        <div class="sensitivity-value" id="res-care-total">¥1,200,000</div>
+        <div class="sensitivity-label">护理费用（若需要）</div>
+      </div>
+      <div class="sensitivity-item">
+        <div class="sensitivity-value" id="res-health-reserve">¥3,050,000</div>
+        <div class="sensitivity-label">健康医疗专项储备</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 敏感度分析 -->
+  <div id="result-sensitivity" style="display:none" class="card gb retire-section">
+    <div class="card-title"><span class="ico">📊</span> 敏感度分析</div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:16px">以下因素变化对退休规划的影响程度：</p>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>变量</th>
+          <th>基准值</th>
+          <th>变化范围</th>
+          <th>对资金需求的影响</th>
+        </tr>
+      </thead>
+      <tbody id="sensitivity-tbody">
+      </tbody>
+    </table>
+    <div class="chart-container">
+      <canvas id="sensitivity-chart" class="chart-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- 建议与行动方案 -->
+  <div id="result-advice" style="display:none" class="card gb retire-section">
+    <div class="card-title"><span class="ico">💡</span> 建议与行动方案</div>
+    <div id="advice-list"></div>
+  </div>
+
+  <!-- 保存按钮 -->
+  <div id="result-actions" style="display:none;display:flex;justify-content:center;gap:12px;margin:24px 0">
+    <button class="btn btn-gold" onclick="saveRetirementResult()">💾 保存到客户档案</button>
+    <button class="btn btn-outline" onclick="window.print()">🖨️ 打印/导出PDF</button>
+  </div>
+
+  <!-- 数据来源说明 -->
+  <div class="card gb" style="margin-top:20px">
+    <div class="card-title"><span class="ico">📚</span> 数据来源与计算依据</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.8">
+      <p style="margin-bottom:12px"><strong style="color:var(--text)">计算方法：</strong></p>
+      <ul style="margin-left:20px;margin-bottom:12px">
+        <li>退休资金需求 = 退休后年支出 × 退休生活年数（按通胀折现）</li>
+        <li>4%安全取款率法则：退休储备金 = 年支出 ÷ 4%</li>
+        <li>医疗费用模型：基于国家卫健委、医保局统计数据</li>
+        <li>护理费用：参考各省市民政局、养老行业协会数据</li>
+      </ul>
+      <p style="margin-bottom:12px"><strong style="color:var(--text)">数据来源：</strong></p>
+      <ul style="margin-left:20px">
+        <li>国家医疗保障局 - 年度医疗费用统计</li>
+        <li>国家卫生健康委员会 - 老年人健康白皮书</li>
+        <li>民政部 - 养老服务发展统计公报</li>
+        <li>世界银行、中国社科院 - 通胀与生活水平研究报告</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/storage.js"></script>
+<script>
+// ── 全局变量 ──
+let clientData = null;
+let currentScenario = 'medium';
+
+// ── 初始化 ──
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('retirement DOMContentLoaded');
+  
+  // 加载客户列表
+  const clients = typeof loadAllClients === 'function' ? loadAllClients() : [];
+  const sel = el('sel-client');
+  clients.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name + '（' + (c.age || '') + '岁）';
+    sel.appendChild(opt);
+  });
+  
+  // 检查预设客户ID
+  const presetClientId = sessionStorage.getItem('selectedClientId');
+  if (presetClientId) {
+    sessionStorage.removeItem('selectedClientId');
+    sel.value = presetClientId;
+    setTimeout(() => loadClientProfile(), 100);
+  }
+  
+  initNav('retirement');
+});
+
+// ── 加载客户数据 ──
+function loadClientProfile() {
+  const cid = el('sel-client').value;
+  if (!cid) {
+    toast('请先选择客户档案', 'error');
+    return;
+  }
+  
+  // 使用 storage.js 中的 loadClientData 函数（加载单个客户）
+  const client = window.loadClientData(cid);
+  if (!client) {
+    toast('未找到该客户', 'error');
+    return;
+  }
+  
+  clientData = client.raw || client;
+  const raw = clientData;
+  
+  // ── 1. 基本信息 ──
+  if (raw.age) el('inp-age').value = raw.age;
+  if (raw.retireAge) el('inp-retire-age').value = raw.retireAge;
+  
+  // ── 2. 收入数据 ──
+  // 月收入 → 年收入
+  const monthlyIncome = (raw.activeIncome || 0) + (raw.passiveIncome || 0);
+  const annualIncome = monthlyIncome * 12;
+  if (annualIncome > 0) el('inp-annual-income').value = Math.round(annualIncome);
+  
+  // ── 3. 支出数据 ──
+  // 当前年度总支出（包含所有支出项）
+  // 支出字段：housing(房贷), propertyFee(物业费), daily(餐饮日用), transport(交通), 
+  // medical(医疗), education(教育), premiumExp(保险保费), debtExp(债务还款), 
+  // flexExp(弹性消费), otherExp(其他支出)
+  const monthlyExpense = (raw.housing || 0) + (raw.propertyFee || 0) + 
+                         (raw.daily || 0) + (raw.transport || 0) +
+                         (raw.medical || 0) + (raw.education || 0) +
+                         (raw.premiumExp || 0) + (raw.debtExp || 0) +
+                         (raw.flexExp || 0) + (raw.otherExp || 0);
+  const annualExpense = monthlyExpense * 12;
+  if (annualExpense > 0) el('inp-annual-expense').value = Math.round(annualExpense);
+  
+  // 退休后年度基础支出（不含教育、弹性消费、债务还款和其他支出）
+  // 保留：房贷(可能还有)、物业费、餐饮日用、交通、医疗、保险保费
+  const monthlyBaseExpense = (raw.housing || 0) + (raw.propertyFee || 0) + 
+                             (raw.daily || 0) + (raw.transport || 0) +
+                             (raw.medical || 0) + (raw.premiumExp || 0);
+  const retireExpense = monthlyBaseExpense * 12;
+  if (retireExpense > 0) el('inp-retire-expense').value = Math.round(retireExpense);
+  
+  // ── 4. 资产数据 ──
+  // 包含全部10种资产类型
+  const totalAssets = (raw.cash || 0) + (raw.moneyFund || 0) + (raw.savingsPlan || 0) + 
+                      (raw.bonds || 0) + (raw.stocks || 0) + (raw.trust || 0) + 
+                      (raw.property || 0) + (raw.gold || 0) + 
+                      (raw.alternatives || 0) + (raw.otherInvest || 0);
+  if (totalAssets > 0) el('inp-total-assets').value = Math.round(totalAssets);
+  
+  // ── 5. 储蓄能力 ──
+  const annualSavings = Math.max(0, annualIncome - annualExpense);
+  if (annualSavings > 0) el('inp-annual-savings').value = Math.round(annualSavings);
+  
+  // ── 6. 退休后其他收入（如租金、兼职等被动收入）──
+  // 退休后可能减少的收入 = 主动收入
+  if (raw.activeIncome && raw.passiveIncome !== undefined) {
+    // 其他收入 = 总被动收入
+    const otherIncome = raw.passiveIncome || 0;
+    if (otherIncome > 0) el('inp-other-income').value = Math.round(otherIncome);
+  }
+  
+  // ── 7. 退休生活质量（基于现有储蓄率估算）──
+  if (annualIncome > 0) {
+    const savingsRate = annualSavings / annualIncome;
+    let lifestyle = 0.8; // 默认
+    if (savingsRate >= 0.4) lifestyle = 1.0;      // 高储蓄率 → 保持品质
+    else if (savingsRate >= 0.2) lifestyle = 0.8; // 中储蓄率 → 维持现状
+    else if (savingsRate >= 0.1) lifestyle = 0.6; // 低储蓄率 → 基础生活
+    el('inp-lifestyle').value = lifestyle;
+  }
+  
+  // ── 8. 医疗费用系数（基于年龄估算）──
+  if (raw.age) {
+    let medicalFactor = 2.0; // 默认
+    if (raw.age >= 55) medicalFactor = 3.0; // 55岁以上 → 重度
+    else if (raw.age >= 45) medicalFactor = 2.0; // 45-55岁 → 中度
+    else if (raw.age >= 35) medicalFactor = 1.5; // 35-45岁 → 轻度
+    else medicalFactor = 1.0; // 年轻 → 基准
+    el('inp-medical-factor').value = medicalFactor;
+  }
+  
+  // ── 9. 护理开始年龄（基于预期寿命估算）──
+  if (raw.age) {
+    // 默认护理开始年龄 = 80岁
+    el('inp-care-start-age').value = 80;
+  }
+  
+  // 显示数据来源统计
+  const stats = [];
+  if (annualIncome > 0) stats.push('收入');
+  if (annualExpense > 0) stats.push('支出');
+  if (totalAssets > 0) stats.push('资产');
+  if (raw.age) stats.push('年龄');
+  
+  if (stats.length > 0) {
+    toast(`已从「${client.name}」档案加载：${stats.join('、')}`);
+  } else {
+    toast('已加载 ' + client.name + ' 的数据（部分字段需手动填写）');
+  }
+}
+
+// ── 通胀情景切换 ──
+function setInflationScenario(scenario) {
+  currentScenario = scenario;
+  
+  // 更新标签样式
+  document.querySelectorAll('.scenario-tab').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  event.target.closest('.scenario-tab').classList.add('active');
+  
+  // 设置通胀率
+  const rates = { low: 2, medium: 3, high: 5 };
+  el('inp-inflation').value = rates[scenario];
+}
+
+// ── 重置表单 ──
+function resetForm() {
+  el('inp-age').value = 40;
+  el('inp-retire-age').value = 60;
+  el('inp-life-exp').value = 85;
+  el('inp-annual-income').value = 500000;
+  el('inp-total-assets').value = 2000000;
+  el('inp-annual-expense').value = 300000;
+  el('inp-retire-expense').value = 240000;
+  el('inp-annual-savings').value = 200000;
+  el('inp-lifestyle').value = '0.8';
+  el('inp-other-income').value = 0;
+  el('inp-medical-factor').value = '2.0';
+  el('inp-care-need').value = 'family';
+  el('inp-care-start-age').value = 80;
+  el('inp-inflation').value = 3;
+  el('inp-pre-return').value = 6;
+  el('inp-post-return').value = 4;
+  
+  // 隐藏结果
+  ['result-core', 'result-comparison', 'result-medical', 'result-sensitivity', 'result-advice', 'result-actions'].forEach(id => {
+    el(id).style.display = 'none';
+  });
+  
+  clientData = null;
+  localStorage.removeItem(RETIREMENT_STORAGE_KEY);
+  toast('已重置表单');
+}
+
+// ── 核心计算 ──
+function calculateRetirement() {
+  // 获取输入值
+  const age = parseInt(el('inp-age').value) || 40;
+  const retireAge = parseInt(el('inp-retire-age').value) || 60;
+  const lifeExp = parseInt(el('inp-life-exp').value) || 85;
+  const annualIncome = parseFloat(el('inp-annual-income').value) || 500000;
+  const totalAssets = parseFloat(el('inp-total-assets').value) || 2000000;
+  const annualExpense = parseFloat(el('inp-annual-expense').value) || 300000;
+  const retireExpense = parseFloat(el('inp-retire-expense').value) || 240000;
+  const annualSavings = parseFloat(el('inp-annual-savings').value) || 200000;
+  const lifestyle = parseFloat(el('inp-lifestyle').value) || 0.8;
+  const otherIncome = parseFloat(el('inp-other-income').value) || 0;
+  const medicalFactor = parseFloat(el('inp-medical-factor').value) || 2.0;
+  const careType = el('inp-care-need').value;
+  const careStartAge = parseInt(el('inp-care-start-age').value) || 80;
+  const inflation = parseFloat(el('inp-inflation').value) / 100 || 0.03;
+  const preReturn = parseFloat(el('inp-pre-return').value) / 100 || 0.06;
+  const postReturn = parseFloat(el('inp-post-return').value) / 100 || 0.04;
+  
+  // 基本计算
+  const yearsToRetire = Math.max(0, retireAge - age);
+  const retireYears = lifeExp - retireAge;
+  const retireYears2 = lifeExp - retireAge;
+  
+  // ── 医疗费用计算 ──
+  // 使用客户实际的月医疗费用，转换为年均值
+  const clientMonthlyMedical = clientData?.medical || 0;
+  const preRetireMedical = clientMonthlyMedical > 0 
+    ? clientMonthlyMedical * 12  // 使用客户实际数据
+    : 8000; // 无数据时使用国家统计平均值
+  const postRetireMedical = preRetireMedical * medicalFactor; // 退休后年均医疗费（乘以系数）
+  
+  // 分段计算退休后医疗费用（考虑通胀）
+  let totalMedicalCost = 0;
+  let medicalByAge = [];
+  for (let y = 0; y < retireYears; y++) {
+    const currentAge = retireAge + y;
+    const futureMedical = postRetireMedical * Math.pow(1 + inflation, y);
+    totalMedicalCost += futureMedical;
+    
+    if (y % 5 === 0 || y === retireYears - 1) {
+      medicalByAge.push({
+        age: currentAge,
+        annual: futureMedical,
+        cumulative: totalMedicalCost
+      });
+    }
+  }
+  
+  // ── 护理费用计算 ──
+  const careCosts = {
+    none: 0,
+    family: 0,
+    community: 8000, // 月均
+    nursing: 18000   // 月均
+  };
+  const careMonthly = careCosts[careType] || 0;
+  const careYears = careType === 'none' ? 0 : Math.max(0, lifeExp - careStartAge);
+  let totalCareCost = 0;
+  if (careYears > 0) {
+    for (let y = 0; y < careYears; y++) {
+      const futureCost = careMonthly * 12 * Math.pow(1 + inflation, y);
+      totalCareCost += futureCost;
+    }
+  }
+  
+  // ── 退休资金需求计算（考虑通胀）──
+  // 退休后年度基础支出 = 用户输入的 retireExpense（不含高端消费和负债）
+  // 期望生活水平 = 在基础支出上调整
+  const retireAnnualExpense = retireExpense * lifestyle;
+  let totalRetireNeed = 0;
+  for (let y = 0; y < retireYears; y++) {
+    const futureExpense = retireAnnualExpense * Math.pow(1 + inflation, y);
+    totalRetireNeed += futureExpense;
+  }
+  
+  // 扣除其他收入
+  let totalOtherIncome = 0;
+  for (let y = 0; y < retireYears; y++) {
+    totalOtherIncome += otherIncome * 12 * Math.pow(1 + inflation, y);
+  }
+  
+  const netRetireNeed = totalRetireNeed - totalOtherIncome + totalMedicalCost + totalCareCost;
+  
+  // ── 积累能力计算 ──
+  // 计算复利积累
+  let accumulated = totalAssets;
+  for (let y = 0; y < yearsToRetire; y++) {
+    accumulated += annualSavings * Math.pow(1 + preReturn, y);
+  }
+  
+  // ── 资金耗尽分析 ──
+  function calcDepletionAge(startAssets, inflationRate, postReturnRate) {
+    let assets = startAssets;
+    let years = 0;
+    let age = retireAge;
+    
+    while (assets > 0 && years < 100) {
+      const expense = retireExpense * Math.pow(1 + inflationRate, years);
+      const netExpense = expense - otherIncome * 12;
+      assets -= netExpense;
+      assets += totalMedicalCost / retireYears; // 平摊医疗费
+      if (years >= careStartAge - retireAge) {
+        assets -= careMonthly * 12 * Math.pow(1 + inflationRate, years);
+      }
+      if (assets > 0) {
+        assets *= (1 + postReturnRate);
+      }
+      years++;
+      age++;
+      if (assets <= 0) break;
+    }
+    
+    return assets > 0 ? { depleted: false, age: age, surplus: assets } : { depleted: true, age: age, deficit: Math.abs(assets) };
+  }
+  
+  const lowInflation = 0.02;
+  const highInflation = 0.05;
+  
+  const depletionLow = calcDepletionAge(accumulated, lowInflation, postReturn);
+  const depletionMedium = calcDepletionAge(accumulated, inflation, postReturn);
+  const depletionHigh = calcDepletionAge(accumulated, highInflation, postReturn);
+  
+  // ── 渲染结果 ──
+  renderCoreResult({
+    age, retireAge, lifeExp, yearsToRetire, retireYears,
+    totalNeed: netRetireNeed,
+    accumulated,
+    totalMedicalCost,
+    totalCareCost
+  });
+  
+  renderComparison({
+    inflation, lowInflation, highInflation,
+    depletionLow, depletionMedium, depletionHigh,
+    yearsToRetire, retireAge
+  });
+  
+  renderMedicalDetail({
+    medicalByAge,
+    totalMedicalCost,
+    careType,
+    careMonthly,
+    careYears,
+    totalCareCost,
+    retireAge,
+    lifeExp,
+    medicalFactor,
+    inflation
+  });
+  
+  renderSensitivity({
+    lifestyle, inflation, postReturn, medicalFactor,
+    totalNeed: netRetireNeed,
+    retireYears
+  });
+  
+  renderAdvice({
+    accumulated,
+    totalNeed: netRetireNeed,
+    yearsToRetire,
+    retirement: depletionMedium,
+    careType,
+    lifestyle
+  });
+  
+  // 显示结果区域
+  ['result-core', 'result-comparison', 'result-medical', 'result-sensitivity', 'result-advice', 'result-actions'].forEach(id => {
+    el(id).style.display = '';
+  });
+  
+  // 渲染时间轴
+  renderTimeline({
+    age, retireAge, lifeExp, depletion: depletionMedium
+  });
+  
+  // 绘制敏感度图表
+  setTimeout(() => drawSensitivityChart(), 100);
+  
+  // 保存表单数据
+  saveFormData();
+  
+  toast('退休规划分析完成');
+}
+
+// ── 渲染核心结果 ──
+function renderCoreResult(data) {
+  const { yearsToRetire, retireYears, totalNeed, accumulated } = data;
+  
+  el('res-years-to-retire').textContent = yearsToRetire + '年';
+  el('res-retire-years').textContent = retireYears + '年';
+  el('res-total-need').textContent = fmt(totalNeed);
+  
+  const coverage = Math.min(100, (accumulated / totalNeed * 100));
+  const coverageText = fmt(accumulated);
+  
+  el('res-readiness-pct').textContent = coverage.toFixed(0) + '%';
+  el('res-readiness-bar').style.width = coverage + '%';
+  
+  if (coverage >= 100) {
+    el('res-readiness-bar').className = 'progress-bar-fill progress-fill-green';
+  } else if (coverage >= 60) {
+    el('res-readiness-bar').className = 'progress-bar-fill progress-fill-yellow';
+  } else {
+    el('res-readiness-bar').className = 'progress-bar-fill progress-fill-red';
+  }
+  
+  el('res-coverage').textContent = coverageText;
+  el('res-target').textContent = fmt(totalNeed);
+  el('res-monthly-save').textContent = fmt(data.accumulated / (yearsToRetire * 12) || 0);
+  el('res-years-left').textContent = yearsToRetire;
+}
+
+// ── 渲染多情景对比 ──
+function renderComparison(data) {
+  const { inflation, lowInflation, highInflation, depletionLow, depletionMedium, depletionHigh, yearsToRetire, retireAge } = data;
+  
+  // 渲染对比表格
+  const scenarios = [
+    { name: '🌱 乐观情景', rate: lowInflation, depletion: depletionLow, color: '#4CAF50' },
+    { name: '☀️ 基准情景', rate: inflation, depletion: depletionMedium, color: '#FFC107' },
+    { name: '⚠️ 保守情景', rate: highInflation, depletion: depletionHigh, color: '#F44336' }
+  ];
+  
+  let tbodyHtml = '';
+  scenarios.forEach(s => {
+    const riskLevel = s.depletion.depleted ? 'badge-red' : 'badge-green';
+    const riskText = s.depletion.depleted ? `资金耗尽于${s.depletion.age}岁` : `可持续至${s.depletion.age}岁`;
+    
+    // 计算该情景下的资金需求
+    let need = 0;
+    const retireBaseExpense = parseFloat(el('inp-retire-expense').value) * parseFloat(el('inp-lifestyle').value);
+    const lifeExp = parseInt(el('inp-life-exp').value);
+    const retireYears = lifeExp - retireAge;
+    for (let y = 0; y < retireYears; y++) {
+      need += retireBaseExpense * Math.pow(1 + s.rate, y);
+    }
+    
+    tbodyHtml += `
+      <tr>
+        <td><strong style="color:${s.color}">${s.name}</strong></td>
+        <td>${(s.rate * 100).toFixed(1)}%</td>
+        <td class="compare-highlight">${fmt(need)}</td>
+        <td>${s.depletion.depleted ? `<span style="color:var(--red)">${s.depletion.age}岁（缺${fmt(s.depletion.deficit)}）</span>` : `<span style="color:#4CAF50">${s.depletion.age}岁（余${fmt(s.depletion.surplus)}）</span>`}</td>
+        <td><span class="result-badge ${riskLevel}">${riskText}</span></td>
+      </tr>`;
+  });
+  
+  el('comparison-tbody').innerHTML = tbodyHtml;
+  
+  // 渲染时间轴（使用基准情景）
+  const lifeExpFromInput = parseInt(el('inp-life-exp').value);
+  renderTimeline({ age: parseInt(el('inp-age').value), retireAge, lifeExp: lifeExpFromInput, depletion: depletionMedium });
+}
+
+// ── 渲染时间轴（全局函数）──
+function renderTimeline(data) {
+  const { age, retireAge, lifeExp, depletion } = data;
+  const container = el('timeline-chart');
+  const depletedAge = depletion.depleted ? depletion.age : null;
+  
+  let html = '';
+  for (let y = age; y <= lifeExp; y++) {
+    let blockClass = 'work';
+    let blockText = '';
+    
+    if (y >= retireAge) {
+      if (depletedAge && y >= depletedAge) {
+        blockClass = 'depleted';
+        blockText = '!';
+      } else {
+        blockClass = 'retire';
+      }
+    }
+    
+    if (y % 5 === 0 || y === age) {
+      html += `
+        <div class="timeline-bar">
+          <div class="timeline-year">${y}</div>
+          <div class="timeline-block ${blockClass}">${blockText || (y >= retireAge ? '退' : '')}</div>
+        </div>`;
+    }
+  }
+  
+  container.innerHTML = `
+    <div style="display:flex;gap:20px;margin-bottom:12px;font-size:11px;color:var(--text2)">
+      <span><span style="display:inline-block;width:12px;height:12px;background:var(--blue);border-radius:2px;margin-right:4px"></span>工作期</span>
+      <span><span style="display:inline-block;width:12px;height:12px;background:var(--gold);border-radius:2px;margin-right:4px"></span>退休期</span>
+      <span><span style="display:inline-block;width:12px;height:12px;background:var(--red);border-radius:2px;margin-right:4px"></span>资金耗尽</span>
+    </div>
+    <div class="timeline">${html}</div>`;
+}
+
+// ── 渲染医疗护理详情 ──
+function renderMedicalDetail(data) {
+  const { totalMedicalCost, careType, careMonthly, careYears, totalCareCost, retireAge, lifeExp, medicalFactor, inflation } = data;
+  
+  // 医疗费用表格
+  const ages = [60, 65, 70, 75, 80, 85, 90, 95, 100];
+  let medicalHtml = '';
+  ages.forEach(a => {
+    if (a <= lifeExp && a >= retireAge) {
+      const yearsAfter = a - retireAge;
+      const annual = 8000 * medicalFactor * Math.pow(1 + inflation, yearsAfter);
+      let cumulative = 0;
+      for (let y = 0; y <= yearsAfter; y++) {
+        cumulative += 8000 * medicalFactor * Math.pow(1 + inflation, y);
+      }
+      medicalHtml += `
+        <tr>
+          <td>${a}岁</td>
+          <td>${fmt(annual)}</td>
+          <td>${fmt(cumulative)}</td>
+        </tr>`;
+    }
+  });
+  el('medical-table-body').innerHTML = medicalHtml;
+  
+  // 护理费用详情
+  const careLabels = {
+    none: '未考虑护理费用',
+    family: '家庭护理（自担成本，含家人时间成本）',
+    community: '社区养老机构',
+    nursing: '专业护理院'
+  };
+  
+  const careStartAge = parseInt(el('inp-care-start-age').value) || 80;
+  
+  el('care-detail').innerHTML = `
+    <p>护理方案：<strong>${careLabels[careType]}</strong></p>
+    <p>预计护理年限：<strong>${careYears}年</strong>（${careStartAge}岁起）</p>
+    ${careYears > 0 ? `
+      <p>当前月均费用：<strong>${fmt(careMonthly)}</strong></p>
+      <p>考虑通胀后总费用：<strong>${fmt(totalCareCost)}</strong></p>
+    ` : ''}
+  `;
+  
+  // 更新汇总
+  el('res-medical-total').textContent = fmt(totalMedicalCost);
+  el('res-care-total').textContent = careYears > 0 ? fmt(totalCareCost) : '¥0';
+  el('res-health-reserve').textContent = fmt(totalMedicalCost + totalCareCost);
+}
+
+// ── 渲染敏感度分析 ──
+function renderSensitivity(data) {
+  const { lifestyle, inflation, postReturn, medicalFactor, totalNeed, retireYears } = data;
+  
+  // 计算各因素变化影响
+  const factors = [
+    {
+      name: '通胀率',
+      base: (inflation * 100).toFixed(1) + '%',
+      range: '±2%',
+      impact: '通胀每升1%，退休需求增加约' + fmt(totalNeed * 0.2),
+      direction: '正相关 ↑'
+    },
+    {
+      name: '退休后收益率',
+      base: (postReturn * 100).toFixed(1) + '%',
+      range: '±2%',
+      impact: '收益率每升1%，可减少约' + fmt(totalNeed * 0.15) + '储备需求',
+      direction: '负相关 ↓'
+    },
+    {
+      name: '生活费用系数',
+      base: (lifestyle * 100).toFixed(0) + '%',
+      range: '60%-120%',
+      impact: '生活标准每升10%，需求增加约' + fmt(totalNeed * 0.1),
+      direction: '正相关 ↑'
+    },
+    {
+      name: '医疗费用系数',
+      base: medicalFactor + 'x',
+      range: '1x-4x',
+      impact: '每增加1倍系数，医疗费用增加约' + fmt(totalNeed * 0.1),
+      direction: '正相关 ↑'
+    },
+    {
+      name: '预期寿命',
+      base: el('inp-life-exp').value + '岁',
+      range: '75-100岁',
+      impact: '每增加5岁，需多准备约' + fmt(totalNeed * 0.15) + '（+5年支出）',
+      direction: '正相关 ↑'
+    }
+  ];
+  
+  let tbodyHtml = '';
+  factors.forEach(f => {
+    tbodyHtml += `
+      <tr>
+        <td><strong>${f.name}</strong></td>
+        <td class="compare-highlight">${f.base}</td>
+        <td>${f.range}</td>
+        <td style="color:var(--text2)">${f.impact}</td>
+        <td><span class="result-badge ${f.direction.includes('↑') ? 'badge-red' : 'badge-green'}">${f.direction}</span></td>
+      </tr>`;
+  });
+  
+  el('sensitivity-tbody').innerHTML = tbodyHtml;
+}
+
+// ── 渲染建议 ──
+function renderAdvice(data) {
+  const { accumulated, totalNeed, yearsToRetire, retirement, careType, lifestyle } = data;
+  
+  const gap = totalNeed - accumulated;
+  const monthlyGap = yearsToRetire > 0 ? gap / (yearsToRetire * 12) : gap;
+  
+  let advices = [];
+  
+  // 准备度建议
+  if (gap > 0) {
+    advices.push({
+      type: 'warning',
+      icon: '⚠️',
+      title: '退休资金存在缺口',
+      content: `以当前规划参数计算，退休资金缺口约 <strong>${fmt(gap)}</strong>。建议每月额外投入约 <strong>${fmt(monthlyGap)}</strong> 或调整退休规划参数。`
+    });
+  } else {
+    advices.push({
+      type: 'success',
+      icon: '✅',
+      title: '退休准备充足',
+      content: `以当前规划计算，现有资产和积累能力可以覆盖退休需求，并可能有约 <strong>${fmt(Math.abs(gap))}</strong> 的安全边际。`
+    });
+  }
+  
+  // 通胀风险建议
+  if (currentScenario === 'low') {
+    advices.push({
+      type: 'info',
+      icon: '💡',
+      title: '建议以保守情景验证',
+      content: '当前选择乐观情景（低通胀2%），建议同时参考保守情景（5%通胀）的结果，确保在不利情况下仍有足够准备。'
+    });
+  }
+  
+  // 医疗护理建议
+  if (careType === 'family') {
+    advices.push({
+      type: 'warning',
+      icon: '🏥',
+      title: '护理规划提醒',
+      content: '选择家庭护理意味着需要自行承担护理成本和时间成本。建议提前评估家庭护理的可行性，并考虑是否需要购买长期护理保险。'
+    });
+  }
+  
+  if (careType === 'none' && parseFloat(el('inp-medical-factor').value) >= 2) {
+    advices.push({
+      type: 'info',
+      icon: '💡',
+      title: '医疗规划建议',
+      content: '您的医疗费用系数设置较高（2倍以上），建议提前规划医疗专项储备，或考虑配置涵盖特定疾病的保险产品。'
+    });
+  }
+  
+  // 投资建议
+  if (yearsToRetire > 20) {
+    advices.push({
+      type: 'info',
+      icon: '📈',
+      title: '长期投资策略',
+      content: `距退休还有${yearsToRetire}年，建议采用"核心+卫星"的资产配置策略，核心仓位配置低费率指数基金，卫星仓位适度配置成长型资产。`
+    });
+  } else if (yearsToRetire > 10) {
+    advices.push({
+      type: 'info',
+      icon: '⚖️',
+      title: '平衡配置策略',
+      content: '距退休10-20年，建议逐步增加固定收益类资产比重，降低组合波动性。可考虑"目标日期基金"简化管理。'
+    });
+  } else {
+    advices.push({
+      type: 'warning',
+      icon: '⏰',
+      title: '临近退休提醒',
+      content: '距退休不足10年，建议逐步将高风险资产转为低风险，确保退休时资产安全。可采用"分段取款策略"平衡收益与流动性。'
+    });
+  }
+  
+  // 敏感度建议
+  advices.push({
+    type: 'info',
+    icon: '🔍',
+    title: '定期检视建议',
+    content: '建议每年检视一次退休规划，重大生活变化（如子女教育、房产购买、健康状况变化）后应重新评估。'
+  });
+  
+  let html = '';
+  advices.forEach(a => {
+    html += `
+      <div class="advice-card ${a.type === 'warning' ? 'warning' : ''}">
+        <div class="advice-title">${a.icon} ${a.title}</div>
+        <p style="font-size:12px;color:var(--text2);line-height:1.6;margin:0">${a.content}</p>
+      </div>`;
+  });
+  
+  el('advice-list').innerHTML = html;
+}
+
+// ── 绘制敏感度图表 ──
+function drawSensitivityChart() {
+  const canvas = el('sensitivity-chart');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * 2;
+  canvas.height = rect.height * 2;
+  ctx.scale(2, 2);
+  
+  const width = rect.width;
+  const height = rect.height;
+  const padding = { top: 30, right: 20, bottom: 40, left: 60 };
+  
+  // 数据
+  const inflationRates = [1, 2, 3, 4, 5, 6];
+  const retireBaseExpense = parseFloat(el('inp-retire-expense').value) * parseFloat(el('inp-lifestyle').value);
+  const retireYears = parseInt(el('inp-life-exp').value) - parseInt(el('inp-retire-age').value);
+  
+  const needs = inflationRates.map(r => {
+    let total = 0;
+    for (let y = 0; y < retireYears; y++) {
+      total += retireBaseExpense * Math.pow(1 + r / 100, y);
+    }
+    return total;
+  });
+  
+  const maxNeed = Math.max(...needs);
+  const minNeed = Math.min(...needs);
+  
+  // 绘制
+  ctx.clearRect(0, 0, width, height);
+  
+  // 坐标轴
+  ctx.strokeStyle = '#444';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padding.left, padding.top);
+  ctx.lineTo(padding.left, height - padding.bottom);
+  ctx.lineTo(width - padding.right, height - padding.bottom);
+  ctx.stroke();
+  
+  // Y轴标签
+  ctx.fillStyle = '#888';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const value = minNeed + (maxNeed - minNeed) * (4 - i) / 4;
+    const y = padding.top + (height - padding.top - padding.bottom) * i / 4;
+    ctx.fillText(fmt(value), padding.left - 5, y + 3);
+    
+    // 网格线
+    ctx.strokeStyle = '#333';
+    ctx.beginPath();
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(width - padding.right, y);
+    ctx.stroke();
+  }
+  
+  // X轴标签
+  ctx.textAlign = 'center';
+  ctx.fillText('通胀率 (%)', width / 2, height - 5);
+  
+  // 数据点
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  
+  // 绘制线
+  ctx.strokeStyle = '#C9A84C';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  inflationRates.forEach((r, i) => {
+    const x = padding.left + chartWidth * i / (inflationRates.length - 1);
+    const y = padding.top + chartHeight * (1 - (needs[i] - minNeed) / (maxNeed - minNeed));
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  
+  // 数据点和标签
+  ctx.fillStyle = '#C9A84C';
+  inflationRates.forEach((r, i) => {
+    const x = padding.left + chartWidth * i / (inflationRates.length - 1);
+    const y = padding.top + chartHeight * (1 - (needs[i] - minNeed) / (maxNeed - minNeed));
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // X轴标签
+    ctx.fillStyle = '#888';
+    ctx.font = '10px sans-serif';
+    ctx.fillText(r + '%', x, height - padding.bottom + 15);
+  });
+  
+  // 标题
+  ctx.fillStyle = '#C9A84C';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('通胀率 vs 退休资金需求', padding.left, 15);
+  
+  // 当前值标记
+  const currentInflation = parseFloat(el('inp-inflation').value);
+  const currentIdx = inflationRates.indexOf(currentInflation);
+  if (currentIdx >= 0) {
+    const x = padding.left + chartWidth * currentIdx / (inflationRates.length - 1);
+    const y = padding.top + chartHeight * (1 - (needs[currentIdx] - minNeed) / (maxNeed - minNeed));
+    
+    ctx.strokeStyle = '#4CAF50';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x, height - padding.bottom);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    ctx.fillStyle = '#4CAF50';
+    ctx.font = '10px sans-serif';
+    ctx.fillText('当前', x, height - padding.bottom + 25);
+  }
+}
+
+// ── 保存结果 ──
+function saveRetirementResult() {
+  const cid = el('sel-client').value;
+  if (!cid) {
+    toast('请先选择客户', 'error');
+    return;
+  }
+  
+  const resultData = {
+    params: {
+      age: el('inp-age').value,
+      retireAge: el('inp-retire-age').value,
+      lifeExp: el('inp-life-exp').value,
+      lifestyle: el('inp-lifestyle').value,
+      inflation: el('inp-inflation').value,
+      medicalFactor: el('inp-medical-factor').value,
+      careType: el('inp-care-need').value
+    },
+    results: {
+      totalNeed: el('res-total-need').textContent,
+      readiness: el('res-readiness-pct').textContent,
+      medicalTotal: el('res-medical-total').textContent,
+      careTotal: el('res-care-total').textContent
+    },
+    savedAt: new Date().toISOString()
+  };
+  
+  if (typeof saveAnalysisResult === 'function') {
+    if (saveAnalysisResult(cid, 'retirement', resultData)) {
+      toast('退休规划已保存到客户档案');
+    } else {
+      toast('保存失败', 'error');
+    }
+  } else {
+    toast('保存功能不可用', 'error');
+  }
+}
+
+// ── 工具函数 ──
+function fmt(num) {
+  if (num >= 100000000) return '¥' + (num / 100000000).toFixed(2) + '亿';
+  if (num >= 10000) return '¥' + (num / 10000).toFixed(0) + '万';
+  return '¥' + num.toFixed(0);
+}
+
+// ── 导航初始化 ──
+function initNav(page) {
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.classList.remove('active');
+    if (link.dataset.page === page) link.classList.add('active');
+  });
+}
+
+// ── 表单数据持久化 ──
+const RETIREMENT_STORAGE_KEY = 'retirement_form_data';
+
+// 保存表单数据到 localStorage
+function saveFormData() {
+  const fields = [
+    'inp-age', 'inp-retire-age', 'inp-life-exp',
+    'inp-annual-income', 'inp-total-assets',
+    'inp-annual-expense', 'inp-retire-expense',
+    'inp-annual-savings', 'inp-lifestyle',
+    'inp-other-income', 'inp-medical-factor',
+    'inp-care-need', 'inp-care-start-age',
+    'inp-inflation', 'inp-pre-return', 'inp-post-return'
+  ];
+  
+  const data = {};
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      data[id] = el.value;
+    }
+  });
+  
+  localStorage.setItem(RETIREMENT_STORAGE_KEY, JSON.stringify(data));
+}
+
+// 恢复表单数据从 localStorage
+function restoreFormData() {
+  const saved = localStorage.getItem(RETIREMENT_STORAGE_KEY);
+  if (!saved) return;
+  
+  try {
+    const data = JSON.parse(saved);
+    Object.keys(data).forEach(id => {
+      const el = document.getElementById(id);
+      if (el && data[id]) {
+        el.value = data[id];
+      }
+    });
+  } catch (e) {
+    // 忽略解析错误
+  }
+}
+
+// 自动保存：输入时保存
+function initAutoSave() {
+  const fields = document.querySelectorAll('#input-section input, #input-section select');
+  fields.forEach(field => {
+    field.addEventListener('change', saveFormData);
+  });
+}
+
+// 初始化
+initNav('retirement');
+restoreFormData();
+initAutoSave();
+</script>
+</body>
+</html>

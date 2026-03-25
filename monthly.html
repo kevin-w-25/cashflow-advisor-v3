@@ -21,6 +21,7 @@
     <a class="nav-link" data-page="scenarios" href="scenarios.html">🔮 场景模拟</a>
     <a class="nav-link" href="portfolio.html">📊 投资组合</a>
     <a class="nav-link" href="insurance.html">🛡️ 保险分析</a>
+    <a class="nav-link" href="retirement.html">🏖️ 退休规划</a>
   </div>
 </nav>
 
@@ -109,18 +110,6 @@
 <script src="assets/app.js"></script>
 <script src="assets/storage.js"></script>
 <script>
-// 工具函数
-const sym = { USD: '$', HKD: 'HK$', CNY: '¥', SGD: 'S$' };
-function fmt(n, c = 'CNY') {
-  if (!n && n !== 0) return '--';
-  const s = sym[c] || '$';
-  if (Math.abs(n) >= 1e6) return s + (n / 1e6).toFixed(2) + 'M';
-  if (Math.abs(n) >= 1000) return s + (n / 1000).toFixed(1) + 'K';
-  return s + Math.round(n).toLocaleString();
-}
-function g(id) { return parseFloat(document.getElementById(id)?.value) || 0; }
-function v(id) { return document.getElementById(id)?.value || ''; }
-function el(id) { return document.getElementById(id); }
 function toast(msg, type = 'success') {
   let wrap = el('toast');
   if (!wrap) { wrap = document.createElement('div'); wrap.id = 'toast'; document.body.appendChild(wrap); }
@@ -167,23 +156,37 @@ function loadClientData() {
   const client = clients.find(c => c.id === cid);
   if (!client) { toast('未找到该客户', 'error'); return; }
 
-  const c = client.currency || 'CNY';
-  el('p-active').value = client.activeIncome || 0;
-  el('p-passive').value = client.passiveIncome || 0;
-  el('p-essential').value = client.essentialExp || 0;
-  el('p-flex').value = client.flexExp || 0;
-  el('p-debt').value = client.debtExp || 0;
+  // 获取原始数据（数据存储在 raw 字段中）
+  const raw = client.raw || client;
+  const c = raw.currency || 'CNY';
+  el('p-active').value = raw.activeIncome || 0;
+  el('p-passive').value = raw.passiveIncome || 0;
+  
+  // 将 planner 的细项支出汇总到 monthly 的分类
+  // 刚性支出 = 房贷 + 物业费 + 餐饮日用 + 交通 + 医疗 + 教育 + 保费
+  const essentialExp = (raw.housing || 0) + (raw.propertyFee || 0) + 
+                       (raw.daily || 0) + (raw.transport || 0) +
+                       (raw.medical || 0) + (raw.education || 0) +
+                       (raw.premiumExp || 0);
+  el('p-essential').value = essentialExp;
+  
+  // 弹性支出 = 弹性消费 + 其他支出
+  el('p-flex').value = (raw.flexExp || 0) + (raw.otherExp || 0);
+  
+  // 债务还款
+  el('p-debt').value = raw.debtExp || 0;
 
   // 检查是否有该月的对账记录
   const month = el('sel-month').value;
-  const records = getReconciliationRecords ? getReconciliationRecords(cid) : [];
-  const existing = records.find(r => r.month === month);
-  if (existing) {
-    el('a-active').value = existing.aActive;
-    el('a-passive').value = existing.aPassive;
-    el('a-essential').value = existing.aEssential;
-    el('a-flex').value = existing.aFlex;
-    el('a-debt').value = existing.aDebt;
+  const key = `recon_${cid}_${month}`;
+  const saved = localStorage.getItem(key);
+  if (saved) {
+    const existing = JSON.parse(saved);
+    el('a-active').value = existing.aActive || '';
+    el('a-passive').value = existing.aPassive || '';
+    el('a-essential').value = existing.aEssential || '';
+    el('a-flex').value = existing.aFlex || '';
+    el('a-debt').value = existing.aDebt || '';
     toast(`已加载 ${month} 的对账记录`);
   } else {
     el('a-active').value = '';

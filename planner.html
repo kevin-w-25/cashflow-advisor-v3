@@ -22,6 +22,7 @@
     <a class="nav-link" data-page="scenarios" href="scenarios.html">🔮 场景模拟</a>
     <a class="nav-link" href="portfolio.html">📊 投资组合</a>
     <a class="nav-link" href="insurance.html">🛡️ 保险分析</a>
+    <a class="nav-link" href="retirement.html">🏖️ 退休规划</a>
   </div>
 </nav>
 
@@ -284,7 +285,7 @@ function validateStep1() {
 
 function validateStep2() {
   const totalIncome = g('s-active') + g('s-passive');
-  const totalExp = g('s-essential') + g('s-flex') + g('s-premium') + g('s-debt');
+  const totalExp = g('s-medical') + g('s-flex') + g('s-premium') + g('s-debt');
   if (totalIncome === 0) { toast('请至少填写主动收入或被动收入', 'error'); return false; }
   // 储蓄率异常高提示
   const savingsRate = totalIncome > 0 ? (totalIncome - totalExp) / totalIncome : 0;
@@ -447,19 +448,30 @@ function loadClientToForm(clientId) {
 
     // 填充资产情况
     el('s-cash').value = data.cash || '';
+    el('s-money-fund').value = data.moneyFund || '';
     el('s-savings-plan').value = data.savingsPlan || '';
+    el('s-bonds').value = data.bonds || '';
+    el('s-stocks').value = data.stocks || '';
     el('s-trust').value = data.trust || '';
     el('s-property').value = data.property || '';
-    el('s-stocks').value = data.stocks || '';
     el('s-gold').value = data.gold || '';
+    el('s-alternatives').value = data.alternatives || '';
+    el('s-other-invest').value = data.otherInvest || '';
 
-    // 填充收支数据
-    el('s-active').value = data.activeIncome || '';
-    el('s-passive').value = data.passiveIncome || '';
-    el('s-essential').value = data.essentialExp || '';
-    el('s-flex').value = data.flexExp || '';
-    el('s-premium').value = data.premiumExp || '';
-    el('s-debt').value = data.debtExp || '';
+    // 填充收支数据（使用辅助函数避免空元素报错）
+    const setVal = (id, val) => { const e = el(id); if (e) e.value = val ?? ''; };
+    setVal('s-active', data.activeIncome);
+    setVal('s-passive', data.passiveIncome);
+    setVal('s-housing', data.housing);
+    setVal('s-property-fee', data.propertyFee);
+    setVal('s-daily', data.daily);
+    setVal('s-transport', data.transport);
+    setVal('s-medical', data.medical); // 医疗健康
+    setVal('s-education', data.education);
+    setVal('s-premium', data.premiumExp);
+    setVal('s-debt', data.debtExp);
+    setVal('s-flex', data.flexExp);
+    setVal('s-other-exp', data.otherExp);
 
     // 填充目标规划
     el('s-retire-need').value = data.retireNeed || '';
@@ -510,29 +522,14 @@ function generateReport() {
 function renderReport(raw, d) {
   const c = d.currency;
   const riskLabel = { conservative: '保守型', moderate: '稳健型', growth: '成长型', aggressive: '激进型' };
-  const riskModelInfo = {
-    conservative: {
-      title: '保守型防御模型（基于 Harry Browne 永久组合改良）',
-      desc: '适合55岁以上或风险厌恶型投资者。核心逻辑：现金20% + 储蓄保险35% + 债券20% + 股票15% + 黄金10%。强调本金安全与稳定现金流，降低权益类资产波动。'
-    },
-    moderate: {
-      title: '稳健型全天候模型（基于达利欧风险平价理念）',
-      desc: '适合追求长期稳定回报的投资者。核心逻辑：现金15% + 储蓄保险25% + 债券15% + 股票30% + 黄金10% + 其他5%。通过多资产类别分散风险，让不同资产在经济周期各阶段发挥对冲作用。'
-    },
-    growth: {
-      title: '成长型本分模型（基于段永平价值投资理念）',
-      desc: '适合有一定研究能力、追求超额收益的投资者。核心逻辑：现金10% + 储蓄保险20% + 债券10% + 股票45% + 黄金5% + 其他10%。强调能力圈内集中投资，安全边际，长期持有优质资产。'
-    },
-    aggressive: {
-      title: '激进型增长模型',
-      desc: '适合年轻投资者或高风险承受能力者。核心逻辑：现金5% + 储蓄保险10% + 债券5% + 股票60% + 黄金10% + 其他10%。高权益配置追求资本增值，需承受较大波动，建议配合长期持有策略。'
-    }
-  };
-  const riskModel = riskModelInfo[d.riskPref] || riskModelInfo.moderate;
-  const riskModelTitle = riskModel.title;
-  const riskModelDesc = riskModel.desc;
   const now = new Date();
   const dateStr = now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  // 获取大师智慧配置
+  const wisdom = wisdomData[d.riskPref] || wisdomData.moderate;
+  const fourAccounts = getFourAccounts(d.riskPref, d.age);
+  const riskModelTitle = wisdom.master + ' · ' + wisdom.name;
+  const riskModelDesc = wisdom.quote;
 
   const benchmarks = getBenchmarks(d.age || 40, d.totalIncome || 0);
   const advices = genAdvices(d);
@@ -540,21 +537,28 @@ function renderReport(raw, d) {
   const allocAnalysis = calcAllocationDrift(d);
   // 只为已有资产生成调仓建议，避免建议客户增持没有的资产类别
   const currentAssetsForRebalance = {
-    cash: d.cash, savingsPlan: d.savingsPlan, trust: d.trust,
-    property: d.property, stocks: d.stocks, gold: d.gold
+    cash: d.cash, moneyFund: d.moneyFund, savingsPlan: d.savingsPlan, bonds: d.bonds,
+    stocks: d.stocks, trust: d.trust, property: d.property,
+    gold: d.gold, alternatives: d.alternatives, otherInvest: d.otherInvest
   };
   const rebalanceAdvices = genRebalanceAdvice(allocAnalysis.drift, d.totalAssets, d.currency, currentAssetsForRebalance);
   const actionPlan = genActionPlan(d);
 
-  // 资产配置 - 当前 vs 目标（隐藏信托和房产）
+  // 资产配置 - 显示所有资产类型
+  // 有目标配置的资产类型（根据风险偏好模型）
+  const hasTargetKeys = ['cash', 'moneyFund', 'savingsPlan', 'bonds', 'stocks', 'gold'];
   const allocItems = [
     { key: 'cash', name: '流动现金', val: d.cash, color: '#4d8fff' },
+    { key: 'moneyFund', name: '货币基金', val: d.moneyFund, color: '#22d3ee' },
     { key: 'savingsPlan', name: '储蓄保险', val: d.savingsPlan, color: '#3ecf8e' },
+    { key: 'bonds', name: '债券基金', val: d.bonds, color: '#6366f1' },
+    { key: 'stocks', name: '股票基金', val: d.stocks, color: '#e05555' },
     { key: 'trust', name: '信托资产', val: d.trust, color: '#8b5cf6' },
     { key: 'property', name: '投资房产', val: d.property, color: '#f59e0b' },
-    { key: 'stocks', name: '股票基金', val: d.stocks, color: '#e05555' },
     { key: 'gold', name: '黄金储备', val: d.gold, color: '#c9a84c' },
-  ].filter(x => x.key !== 'trust' && x.key !== 'property'); // 隐藏信托和房产
+    { key: 'alternatives', name: '私募基金', val: d.alternatives, color: '#ec4899' },
+    { key: 'otherInvest', name: '其他投资', val: d.otherInvest, color: '#64748b' },
+  ].filter(x => x.val > 0); // 只显示有值的资产
 
   // 评分明细
   const scoreItems = [
@@ -592,6 +596,16 @@ function renderReport(raw, d) {
             <div class="track"><div class="fill" style="width:${(s.val/s.max*100).toFixed(0)}%;background:${scoreColor(s.val)}"></div></div>
             <span class="num">${s.val}/${s.max}</span>
           </div>`).join('')}
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:600">📋 评分标准</div>
+          <div style="font-size:10px;color:var(--text2);line-height:1.6">
+            <div>🟢 紧急预备金：覆盖月数 × 20分（6个月=满分20分）</div>
+            <div>🟢 储蓄能力：储蓄率% 直接计分（20%储蓄率=20分）</div>
+            <div>🟢 负债管理：负债率&lt;15%=20分，&lt;30%=15分，&lt;50%=8分</div>
+            <div>🟢 被动收入：被动收入占比 × 20分（50%占比=10分，100%占比=20分）</div>
+            <div>🟢 资产分散度：资产种类数 × 3.5分（6类资产=21分）</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -639,15 +653,51 @@ function renderReport(raw, d) {
     <div class="card gb" style="margin-bottom:24px">
       <div class="card-title"><span class="ico">🏗️</span> 资产配置分析 <span style="font-size:11px;color:var(--text2);font-weight:400;margin-left:auto">总计 ${fmt(d.totalAssets, c)}</span></div>
       
-      <!-- 风险偏好模型说明 -->
-      <div style="margin-bottom:16px;padding:14px;background:var(--card2);border-radius:10px;border-left:3px solid var(--gold)">
-        <div style="font-size:12px;font-weight:600;color:var(--gold);margin-bottom:6px">📊 当前配置模型：${riskModelTitle}</div>
-        <div style="font-size:11px;color:var(--text2);line-height:1.7">${riskModelDesc}</div>
+      <!-- 大师智慧 + 四大账户 -->
+      <div style="margin-bottom:16px">
+        <!-- 大师理念 -->
+        <div style="padding:14px;background:var(--card2);border-radius:10px;border-left:3px solid var(--gold);margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="font-size:14px">🎓</span>
+            <span style="font-size:12px;font-weight:600;color:var(--gold)">${riskModelTitle}</span>
+          </div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.6;margin-bottom:8px">"${riskModelDesc}"</div>
+          <div style="font-size:10px;color:var(--text3)">${wisdom.principle}</div>
+        </div>
+        
+        <!-- 四大账户 -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+          <div style="padding:10px;background:rgba(77,143,255,.1);border-radius:8px;text-align:center">
+            <div style="font-size:16px;margin-bottom:4px">🏠</div>
+            <div style="font-size:11px;font-weight:600;color:#4d8fff">要花的钱</div>
+            <div style="font-size:18px;font-weight:700;color:#4d8fff">${fourAccounts.spending}%</div>
+            <div style="font-size:9px;color:var(--text3)">现金+货币基金</div>
+          </div>
+          <div style="padding:10px;background:rgba(62,207,142,.1);border-radius:8px;text-align:center">
+            <div style="font-size:16px;margin-bottom:4px">🛡️</div>
+            <div style="font-size:11px;font-weight:600;color:var(--green)">保命的钱</div>
+            <div style="font-size:18px;font-weight:700;color:var(--green)">${fourAccounts.protection}%</div>
+            <div style="font-size:9px;color:var(--text3)">储蓄保险</div>
+          </div>
+          <div style="padding:10px;background:rgba(224,85,85,.1);border-radius:8px;text-align:center">
+            <div style="font-size:16px;margin-bottom:4px">💰</div>
+            <div style="font-size:11px;font-weight:600;color:var(--red)">生钱的钱</div>
+            <div style="font-size:18px;font-weight:700;color:var(--red)">${fourAccounts.growth}%</div>
+            <div style="font-size:9px;color:var(--text3)">股票基金</div>
+          </div>
+          <div style="padding:10px;background:rgba(201,168,76,.1);border-radius:8px;text-align:center">
+            <div style="font-size:16px;margin-bottom:4px">💎</div>
+            <div style="font-size:11px;font-weight:600;color:var(--gold)">保值的钱</div>
+            <div style="font-size:18px;font-weight:700;color:var(--gold)">${fourAccounts.preservation}%</div>
+            <div style="font-size:9px;color:var(--text3)">债券+黄金+储蓄险</div>
+          </div>
+        </div>
       </div>
       
       <!-- 当前 vs 目标对比 -->
       <div style="margin-top:16px">
         ${allocItems.map(a => {
+          const hasTarget = hasTargetKeys.includes(a.key);
           const target = allocAnalysis.target[a.key] || 0;
           const current = allocAnalysis.current[a.key] || 0;
           const diff = current - target;
@@ -659,16 +709,26 @@ function renderReport(raw, d) {
               <span style="font-size:12px;color:var(--text3);width:70px">${a.name}</span>
               <div style="flex:1;display:flex;align-items:center;gap:8px">
                 <div style="flex:1;height:8px;background:var(--dark);border-radius:99px;overflow:hidden;position:relative">
-                  <div style="position:absolute;left:${target}%;top:0;bottom:0;width:2px;background:var(--gold);z-index:2"></div>
+                  ${hasTarget ? `<div style="position:absolute;left:${target}%;top:0;bottom:0;width:2px;background:var(--gold);z-index:2"></div>` : ''}
                   <div style="height:100%;width:${current}%;background:${a.color};border-radius:99px;opacity:0.8"></div>
                 </div>
               </div>
               <span style="font-size:11px;color:var(--text2);width:60px;text-align:right">${current.toFixed(1)}%</span>
-              <span style="font-size:10px;color:var(--gold);width:50px;text-align:center">目标:${target.toFixed(0)}%</span>
-              <span style="font-size:11px;${Math.abs(diff) > 5 ? 'font-weight:600' : ''};color:${diff > 5 ? 'var(--red)' : diff < -5 ? 'var(--gold)' : 'var(--green)'}" class="${diffClass}">${diffText}</span>
+              ${hasTarget ? `
+                <span style="font-size:10px;color:var(--gold);width:50px;text-align:center">目标:${target.toFixed(0)}%</span>
+                <span style="font-size:11px;${Math.abs(diff) > 5 ? 'font-weight:600' : ''};color:${diff > 5 ? 'var(--red)' : diff < -5 ? 'var(--gold)' : 'var(--green)'}" class="${diffClass}">${diffText}</span>
+              ` : `
+                <span style="font-size:10px;color:var(--text3);width:100px;text-align:right">${a.val > 0 ? '在模型外' : ''}</span>
+              `}
             </div>
           `;
         }).join('')}
+        
+        <!-- 总和验证 -->
+        <div style="margin-top:12px;padding:10px;background:var(--card2);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;color:var(--text2)">当前配置总和</span>
+          <span style="font-size:14px;font-weight:600;color:${Math.abs(allocAnalysis.displayedTotal - 100) < 1 ? 'var(--green)' : 'var(--gold)'}">${allocAnalysis.displayedTotal.toFixed(1)}%</span>
+        </div>
       </div>
       
       <!-- 调仓建议 -->
