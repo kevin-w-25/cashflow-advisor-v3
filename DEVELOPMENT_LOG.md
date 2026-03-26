@@ -315,3 +315,202 @@ genRebalanceAdvice(drift, total, currency, currentAssets) → Array<Advice>
 ---
 
 *文档更新时间：2026-03-24 22:07*
+
+---
+
+## 2026-03-25 问题修复
+
+### 一、AI顾问解读功能修复
+
+#### 1. generateAIInterpret 函数递归调用问题
+
+**问题描述**：
+- AI顾问解读按钮点击后报错：`ReferenceError: generateAIInterpret is not defined`
+- `triggerAIInterpret()` 调用 `generateAIInterpret()` 时找不到函数
+
+**根本原因**：
+- `generateAIInterpret` 函数在 `assets/ai-interpret.js` 中定义
+- 但该文件在 `planner.html` 中被放在 `<head>` 标签内，在 `app.js` 之前加载
+- 而 `ai-interpret.js` 依赖 `app.js` 中的 `fmt` 和 `genActionPlan` 函数
+
+**修复内容**：
+```html
+<!-- 修复前（错误的加载顺序） -->
+<head>
+  <script src="assets/ai-interpret.js"></script>  <!-- 依赖 app.js -->
+  ...
+</head>
+<body>
+  <script src="assets/app.js"></script>  <!-- 太晚加载 -->
+</body>
+
+<!-- 修复后（正确的加载顺序） -->
+<body>
+  <script src="assets/app.js"></script>        <!-- 1. 先加载基础函数 -->
+  <script src="assets/ai-interpret.js"></script> <!-- 2. 再加载AI解读 -->
+  <script src="assets/storage.js"></script>     <!-- 3. 最后加载存储 -->
+</body>
+```
+
+---
+
+#### 2. 被动收入解读中现金流数字显示 "--"
+
+**问题描述**：
+- AI解读中的"立即行动"部分显示：`10年后形成约--的年现金流`
+- 数字显示为 "--" 而非具体金额
+
+**根本原因**：
+```javascript
+// 问题代码
+const suggestionAmount = fmt(Math.max(d.monthlySurplus * 6, d.totalIncome * 0.1), c);
+```
+- 当 `monthlySurplus` 为负数或 0 时，`suggestionAmount` 可能为 0 或无效值
+- `fmt()` 函数对于 0 或无效值返回 "--"
+
+**修复内容**：
+```javascript
+// 修复后：确保建议金额为正数，最少5000元
+const monthlyIncome = d.totalIncome || 0;
+const monthlySurplus = d.monthlySurplus || 0;
+const baseSuggestion = Math.max(monthlySurplus * 6, monthlyIncome * 0.1);
+const suggestionAmount = Math.max(baseSuggestion, 5000); // 最少5000元
+const suggestionFmt = fmt(suggestionAmount, c);
+
+// 计算10年和20年后的年现金流（按6%复利+4%提取率）
+const annualAt10 = suggestionAmount * Math.pow(1.06, 10) * 0.04;
+const annualAt20 = suggestionAmount * Math.pow(1.06, 20) * 0.04;
+const year10Fmt = fmt(annualAt10, c);
+const year20Fmt = fmt(annualAt20, c);
+```
+
+---
+
+#### 3. 模板字符串语法错误
+
+**问题描述**：
+- 控制台报错：`SyntaxError: Invalid or unexpected token (at ai-interpret.js:496:57)`
+
+**根本原因**：
+```javascript
+// 问题代码：模板字符串中包含换行
+${d.monthlySurplus > 15000 ? '
+
+按照你的储蓄能力，可以同时考虑大额增额寿险，年化收益更高。' : ''}
+```
+
+**修复内容**：
+```javascript
+// 修复后：使用条件分支拼接字符串
+let text = `以你现在的储蓄能力（月结余${fmt(d.monthlySurplus, c)}），建议每年配置约${suggestionAmount}的美元储蓄险。
+
+10年后将形成稳定的现金流来源，同时规避人民币汇率风险。
+
+这类产品长期复利约5-6%，是建立被动收入的最佳起点。`;
+if (d.monthlySurplus > 15000) {
+  text += `\n\n按照你的储蓄能力，可以同时考虑大额增额寿险，年化收益更高。`;
+}
+return text;
+```
+
+---
+
+### 二、客户档案编辑功能修复
+
+#### 问题：点击"编辑档案"后表单为空
+
+**问题描述**：
+- 从 clients.html 点击"编辑档案"跳转到 planner.html
+- 表单中所有字段都是空的，客户数据没有加载
+
+**根本原因**：
+- `DOMContentLoaded` 事件监听器使用 `addEventListener`
+- 当从其他页面跳转过来时，DOM 可能已经加载完成
+- 事件监听器错过了触发时机
+
+**修复内容**：
+```javascript
+// 修复前
+document.addEventListener('DOMContentLoaded', () => {
+  const selectedClientId = sessionStorage.getItem('selectedClientId');
+  if (selectedClientId) {
+    loadClientToForm(selectedClientId);
+    sessionStorage.removeItem('selectedClientId');
+  }
+});
+
+// 修复后
+function checkSelectedClient() {
+  const selectedClientId = sessionStorage.getItem('selectedClientId');
+  if (selectedClientId) {
+    console.log('从客户列表跳转，正在加载客户:', selectedClientId);
+    loadClientToForm(selectedClientId);
+    sessionStorage.removeItem('selectedClientId');
+  }
+}
+
+// 立即检查（兼容已加载的 DOM）
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', checkSelectedClient);
+} else {
+  checkSelectedClient();
+}
+```
+
+---
+
+### 三、浏览器缓存问题
+
+**问题描述**：
+- 修改了 JS 文件后，浏览器仍然使用旧版本
+- 导致各种"函数未定义"错误
+
+**解决方案**：
+
+1. **开发时使用本地服务器**：
+```bash
+cd D:\output\cashflow-advisor-v2
+python -m http.server 8080
+```
+然后访问 `http://localhost:8080/planner.html`
+
+2. **强制刷新**：`Ctrl + Shift + F5`
+
+3. **无痕模式**：无痕窗口不会使用缓存
+
+4. **禁用缓存**：打开开发者工具（F12）→ Network → 勾选"Disable cache"
+
+---
+
+### 四、本次修复文件清单
+
+| 文件 | 修改内容 |
+|------|---------|
+| `planner.html` | 调整脚本加载顺序、修复 DOMContentLoaded 问题 |
+| `assets/ai-interpret.js` | 修复现金流计算逻辑、修复模板字符串语法错误 |
+| `assets/app.js` | （无需修改） |
+| `assets/storage.js` | （无需修改） |
+
+---
+
+### 五、经验教训
+
+1. **脚本加载顺序很重要**：
+   - 依赖其他文件的脚本必须在被依赖的文件之后加载
+   - 基础工具函数（fmt, el, v 等）→ 业务逻辑函数 → 页面初始化代码
+
+2. **DOMContentLoaded 的坑**：
+   - 使用 `document.readyState` 检查 DOM 状态
+   - 避免使用单一的 `addEventListener('DOMContentLoaded')`
+
+3. **数学计算要防零**：
+   - `Math.max()` 配合默认值确保结果为正数
+   - `|| 0` 防止 undefined 导致计算错误
+
+4. **模板字符串慎用多行**：
+   - 模板字符串中的换行可能导致意外问题
+   - 复杂逻辑用条件分支替代
+
+---
+
+*文档更新时间：2026-03-25 23:04*

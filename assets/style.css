@@ -253,3 +253,293 @@ hr.gd{border:none;border-top:1px solid var(--border2);margin:18px 0}
 
 /* ── STEP PANELS ── */
 .step-panel{animation:fu .35s ease}
+
+/* ── MODE SELECTOR ── */
+.mode-selector {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 28px;
+  padding: 0;
+  background: var(--dark2);
+  border-radius: 16px;
+  padding: 6px;
+  border: 1px solid var(--border);
+}
+.mode-selector-bg {
+  display: none;
+}
+.mode-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 20px;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+  z-index: 1;
+}
+.mode-btn .mode-icon {
+  font-size: 28px;
+  margin-bottom: 4px;
+  transition: transform 0.25s ease;
+}
+.mode-btn .mode-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text2);
+  transition: color 0.25s ease;
+}
+.mode-btn .mode-desc {
+  font-size: 11px;
+  color: var(--text3);
+  transition: color 0.25s ease;
+}
+.mode-btn.active {
+  background: var(--dark3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+.mode-btn.active .mode-title {
+  color: var(--gold);
+}
+.mode-btn:hover:not(.active) .mode-icon {
+  transform: scale(1.1);
+}
+.mode-btn:hover:not(.active) .mode-title {
+  color: var(--text);
+}
+
+/* 简单版和复杂版的表单区域 */
+#step1-simple,
+#step2-simple {
+  display: none;
+}
+body.mode-simple #step1,
+body.mode-simple #step2,
+body.mode-pro #step1-simple,
+body.mode-pro #step2-simple {
+  display: none !important;
+}
+body.mode-simple #step1-simple,
+body.mode-simple #step2-simple {
+  display: block !important;
+}
+body.mode-simple .phases {
+  display: flex;
+}
+body.mode-simple .phases .phase[data-step="3"] {
+  display: none;
+}
+body.mode-pro .phases .phase[data-step="3"] {
+  display: block;
+}
+
+/* 简单版表单卡片 */
+.simple-form-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.simple-form-card .card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gold);
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.simple-form-card .card-title .ico {
+  font-size: 18px;
+}
+
+/* 简单版结果页 */
+.simple-report-header {
+  text-align: center;
+  margin-bottom: 28px;
+  padding: 28px 20px;
+  background: linear-gradient(135deg, rgba(62, 207, 142, 0.08), rgba(62, 207, 142, 0.02));
+  border-radius: 16px;
+  border: 1px solid rgba(62, 207, 142, 0.25);
+}
+.simple-report-header .badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: rgba(62, 207, 142, 0.15);
+  border: 1px solid rgba(62, 207, 142, 0.3);
+  border-radius: 20px;
+  font-size: 11px;
+  color: var(--green);
+  margin-bottom: 12px;
+}
+.simple-report-header .title {
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+.simple-report-header .subtitle {
+  font-size: 13px;
+  color: var(--text2);
+}
+
+.simple-score-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+.simple-score-card .score-number {
+  font-size: 64px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.simple-score-card .score-label {
+  font-size: 14px;
+  color: var(--text2);
+}
+.simple-score-card .score-detail {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border2);
+}
+.simple-score-card .score-item {
+  text-align: center;
+}
+.simple-score-card .score-item .val {
+  font-size: 20px;
+  font-weight: 700;
+}
+.simple-score-card .score-item .lbl {
+  font-size: 11px;
+  color: var(--text2);
+  margin-top: 4px;
+}
+
+.simple-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.simple-kpi {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  text-align: center;
+}
+.simple-kpi .lbl {
+  font-size: 11px;
+  color: var(--text2);
+  margin-bottom: 8px;
+}
+.simple-kpi .val {
+  font-size: 18px;
+  font-weight: 700;
+}
+.simple-kpi .sub {
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 4px;
+}
+
+.simple-interpret-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.simple-interpret-card .card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gold);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.simple-interpret-card .content {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--text);
+  white-space: pre-line;
+}
+
+.simple-advice-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.simple-advice-card .card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gold);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.simple-advice-card .advice-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: var(--card2);
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+.simple-advice-card .advice-item:last-child {
+  margin-bottom: 0;
+}
+.simple-advice-card .advice-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.simple-advice-card .advice-content {
+  flex: 1;
+}
+.simple-advice-card .advice-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.simple-advice-card .advice-desc {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.5;
+}
+
+.simple-action-btn {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+.simple-action-btn .btn {
+  flex: 1;
+  justify-content: center;
+  padding: 14px;
+}
+
+/* 专业版表单隐藏标记 */
+.pro-only {
+  display: block;
+}
+.mode-simple .pro-only {
+  display: none !important;
+}

@@ -15,9 +15,7 @@
   <div class="nav-links">
     <a class="nav-link" data-page="index" href="index.html">🏠 首页</a>
     <a class="nav-link active" data-page="clients" href="clients.html">📋 客户档案</a>
-    <a class="nav-link" data-page="comparison" href="comparison.html">📈 历史对比</a>
     <a class="nav-link" data-page="planner" href="planner.html">📊 开始分析</a>
-    <a class="nav-link" data-page="monthly" href="monthly.html">📅 月度对账</a>
     <a class="nav-link" data-page="scenarios" href="scenarios.html">🔮 场景模拟</a>
     <a class="nav-link" href="portfolio.html">📊 投资组合</a>
     <a class="nav-link" href="insurance.html">🛡️ 保险分析</a>
@@ -211,11 +209,6 @@ function renderClientList(clients = null) {
                 ${client.analyses?.insurance ? '<span style="margin-left:4px;color:var(--green)">✓</span>' : ''}
               </button>
               <button class="btn btn-outline" style="padding:8px 16px;font-size:13px"
-                      data-id="${client.id}" onclick="event.stopPropagation();openAnalysis('monthly', this.dataset.id)">
-                📅 月度对账
-                ${client.analyses?.monthly ? '<span style="margin-left:4px;color:var(--green)">✓</span>' : ''}
-              </button>
-              <button class="btn btn-outline" style="padding:8px 16px;font-size:13px"
                       data-id="${client.id}" onclick="event.stopPropagation();openAnalysis('scenarios', this.dataset.id)">
                 🔮 场景模拟
               </button>
@@ -290,7 +283,6 @@ function openAnalysis(type, clientId) {
   const pages = {
     portfolio: 'portfolio.html',
     insurance: 'insurance.html',
-    monthly: 'monthly.html',
     scenarios: 'scenarios.html'
   };
   

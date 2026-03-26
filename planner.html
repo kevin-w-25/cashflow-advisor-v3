@@ -16,9 +16,7 @@
   <div class="nav-links">
     <a class="nav-link" data-page="index" href="index.html">🏠 首页</a>
     <a class="nav-link" data-page="clients" href="clients.html">📋 客户档案</a>
-    <a class="nav-link" data-page="comparison" href="comparison.html">📈 历史对比</a>
     <a class="nav-link active" data-page="planner" href="planner.html">📊 开始分析</a>
-    <a class="nav-link" data-page="monthly" href="monthly.html">📅 月度对账</a>
     <a class="nav-link" data-page="scenarios" href="scenarios.html">🔮 场景模拟</a>
     <a class="nav-link" href="portfolio.html">📊 投资组合</a>
     <a class="nav-link" href="insurance.html">🛡️ 保险分析</a>
@@ -28,18 +26,167 @@
 
 <div class="main" style="max-width:960px">
 
-  <!-- 步骤指示器 -->
-  <div class="phases" id="phases">
-    <div class="phase active" data-step="1" onclick="goStepNav(1)"><span class="pn">1</span>基本信息</div>
-    <div class="phase" data-step="2" onclick="goStepNav(2)"><span class="pn">2</span>收支数据</div>
-    <div class="phase" data-step="3" onclick="goStepNav(3)"><span class="pn">3</span>分析报告</div>
+  <!-- 模式切换器 -->
+  <div class="mode-selector" id="modeSelector">
+    <div class="mode-selector-bg"></div>
+    <button class="mode-btn active" data-mode="simple" onclick="switchMode('simple')">
+      <span class="mode-icon">🌱</span>
+      <span class="mode-title">简单版</span>
+      <span class="mode-desc">快速了解财务状况</span>
+    </button>
+    <button class="mode-btn" data-mode="pro" onclick="switchMode('pro')">
+      <span class="mode-icon">💼</span>
+      <span class="mode-title">专业版</span>
+      <span class="mode-desc">完整财务规划</span>
+    </button>
   </div>
 
-  <!-- ═══════ STEP 1: 基本信息 ═══════ -->
+  <!-- 步骤指示器 -->
+  <div class="phases" id="phases">
+    <div class="phase" data-step="1" onclick="goStepNav(1)"><span class="pn">1</span><span class="phase-label">基本信息</span></div>
+    <div class="phase" data-step="2" onclick="goStepNav(2)"><span class="pn">2</span><span class="phase-label">收支数据</span></div>
+    <div class="phase" data-step="3" onclick="goStepNav(3)"><span class="pn">3</span><span class="phase-label">分析报告</span></div>
+  </div>
+
+  <!-- ═══════ SIMPLE STEP 1: 简单版基本信息 ═══════ -->
+  <div id="step1-simple" class="step-panel">
+    <div class="page-header">
+      <div class="page-title">基本信息</div>
+      <div class="page-sub">只需几个数字，快速了解您的财务健康状况</div>
+    </div>
+
+    <!-- 隐私安全说明横幅 -->
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;margin-bottom:20px;background:linear-gradient(135deg,rgba(62,207,142,0.08),rgba(62,207,142,0.04));border:1px solid rgba(62,207,142,0.25);border-radius:12px;font-size:12.5px;color:#10b981">
+      <span style="font-size:20px;flex-shrink:0">🔒</span>
+      <div>
+        <span style="font-weight:700">数据完全本地处理：</span>
+        所有计算在您的浏览器完成，<strong>不会上传至任何服务器</strong>。可以用估算数字填写。
+      </div>
+    </div>
+
+    <div class="simple-form-card">
+      <div class="card-title"><span class="ico">👤</span> 个人信息</div>
+      <div class="frow">
+        <div class="fg"><label>姓名 *</label><input type="text" id="sim-name" placeholder="请输入您的姓名"/></div>
+        <div class="fg"><label>年龄 *</label><input type="number" id="sim-age" placeholder="如：35" min="18" max="100"/></div>
+      </div>
+      <div class="frow">
+        <div class="fg">
+          <label>风险偏好</label>
+          <select id="sim-risk">
+            <option value="conservative">保守型（求稳）</option>
+            <option value="moderate" selected>稳健型（平衡）</option>
+            <option value="growth">成长型（进取）</option>
+            <option value="aggressive">激进型（高风险高回报）</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>主要货币</label>
+          <select id="sim-currency">
+            <option value="USD">美元 (USD)</option>
+            <option value="HKD">港币 (HKD)</option>
+            <option value="CNY">人民币 (CNY)</option>
+            <option value="SGD">新加坡元 (SGD)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="simple-form-card">
+      <div class="card-title"><span class="ico">💰</span> 月度收支</div>
+      <div class="frow">
+        <div class="fg"><label>月收入（税后）</label><div class="unit"><input type="number" id="sim-income" placeholder="如：30000"/><span class="uf">/月</span></div></div>
+        <div class="fg"><label>月支出（估算）</label><div class="unit"><input type="number" id="sim-expense" placeholder="如：15000"/><span class="uf">/月</span></div></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>月储蓄额（可选）</label><div class="unit"><input type="number" id="sim-savings" placeholder="自动计算"/><span class="uf">/月</span></div></div>
+        <div class="fg"><label>当前总资产（可选）</label><div class="unit"><input type="number" id="sim-assets" placeholder="如：500000"/><span class="uf">总额</span></div></div>
+      </div>
+      <div id="sim-savings-hint" style="margin-top:8px;font-size:12px;color:var(--text2);display:none">
+        💡 月储蓄额 = 月收入 - 月支出
+      </div>
+    </div>
+
+    <div class="simple-form-card">
+      <div class="card-title"><span class="ico">🎯</span> 财务目标（选填）</div>
+      <div class="frow">
+        <div class="fg"><label>预期退休年龄</label><input type="number" id="sim-retire" value="60" min="40" max="80"/></div>
+        <div class="fg"><label>退休后期望月支出</label><div class="unit"><input type="number" id="sim-retire-expense" placeholder="如：10000"/><span class="uf">/月</span></div></div>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end">
+      <button class="btn btn-gold" onclick="simGoStep(2)">下一步 →</button>
+    </div>
+  </div>
+
+  <!-- ═══════ SIMPLE STEP 2: 简单版收支确认 ═══════ -->
+  <div id="step2-simple" class="step-panel" style="display:none">
+    <div class="page-header">
+      <div class="page-title">收支确认</div>
+      <div class="page-sub">请确认您的月度收支情况</div>
+    </div>
+
+    <div class="simple-form-card">
+      <div class="card-title"><span class="ico">📊</span> 收支汇总</div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div style="text-align:center;padding:20px;background:rgba(62,207,142,0.08);border-radius:12px">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:8px">月收入</div>
+          <div id="sim-confirm-income" style="font-size:24px;font-weight:700;color:var(--green)">¥0</div>
+        </div>
+        <div style="text-align:center;padding:20px;background:rgba(224,85,85,0.08);border-radius:12px">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:8px">月支出</div>
+          <div id="sim-confirm-expense" style="font-size:24px;font-weight:700;color:var(--red)">¥0</div>
+        </div>
+      </div>
+
+      <div style="text-align:center;padding:20px;background:linear-gradient(135deg,rgba(201,168,76,0.1),rgba(201,168,76,0.05));border-radius:12px;margin-bottom:16px">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px">月储蓄额</div>
+        <div id="sim-confirm-savings" style="font-size:32px;font-weight:800;color:var(--gold)">¥0</div>
+        <div id="sim-savings-rate" style="font-size:13px;color:var(--text2);margin-top:8px">储蓄率 0%</div>
+      </div>
+
+      <div style="padding:14px;background:var(--card2);border-radius:10px;font-size:12px;color:var(--text2);line-height:1.7">
+        <strong style="color:var(--text)">💡 财务健康参考：</strong><br>
+        • 储蓄率 20%以上为基本达标<br>
+        • 储蓄率 30%以上为优秀<br>
+        • 建议紧急预备金覆盖 3-6 个月支出
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between">
+      <button class="btn btn-ghost" onclick="simGoStep(1)">← 修改</button>
+      <button class="btn btn-gold" onclick="simGenerateReport()">生成分析报告 →</button>
+    </div>
+  </div>
+
+  <!-- ═══════ SIMPLE STEP 3: 简单版分析报告 ═══════ -->
+  <div id="step3-simple" class="step-panel" style="display:none">
+    <div id="simple-report-content"></div>
+    <div style="display:flex;justify-content:space-between;margin-top:24px;padding-top:24px;border-top:1px solid var(--border2)">
+      <button class="btn btn-gold" onclick="simGoStep(2)">← 重新分析</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost" onclick="location.href='planner.html'">新建分析</button>
+        <button class="btn btn-gold" onclick="downloadPDF()">🖨️ 导出报告</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ STEP 1: 基本信息（专业版） ═══════ -->
   <div id="step1" class="step-panel">
     <div class="page-header">
       <div class="page-title">第一步：基本信息</div>
       <div class="page-sub">请填写您的基本信息，帮助我们为您量身定制分析</div>
+    </div>
+
+    <!-- 隐私安全说明横幅 -->
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;margin-bottom:20px;background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(16,185,129,0.04));border:1px solid rgba(16,185,129,0.25);border-radius:12px;font-size:12.5px;color:#10b981">
+      <span style="font-size:20px;flex-shrink:0">🔒</span>
+      <div>
+        <span style="font-weight:700">您的数据完全安全：</span>
+        所有计算均在您的浏览器本地完成，<strong>不会上传至任何服务器</strong>，不需要注册或登录，关闭页面后数据自动清除。您可以用大约估算的数字填写，结果同样有参考价值。
+      </div>
     </div>
 
     <div class="card gb" style="margin-bottom:20px">
@@ -213,26 +360,112 @@
 </div>
 
 <script src="assets/app.js"></script>
+<script src="assets/ai-interpret.js"></script>
 <script src="assets/storage.js"></script>
 <script>
 initNav('planner');
+
+// ════════════════════════════════════════════════════════════
+// 模式切换系统
+// ════════════════════════════════════════════════════════════
+let currentMode = 'simple'; // 默认简单版
+
+// URL参数检测
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const modeParam = params.get('mode');
+  if (modeParam === 'pro' || modeParam === 'professional') {
+    switchMode('pro');
+  } else {
+    switchMode('simple');
+  }
+})();
+
+function switchMode(mode) {
+  currentMode = mode;
+  
+  // 更新按钮状态
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+  
+  // 更新body类
+  document.body.classList.remove('mode-simple', 'mode-pro');
+  document.body.classList.add('mode-' + mode);
+  
+  // 更新URL（不刷新页面）
+  const url = new URL(window.location);
+  if (mode === 'simple') {
+    url.searchParams.delete('mode');
+  } else {
+    url.searchParams.set('mode', 'pro');
+  }
+  window.history.replaceState({}, '', url);
+  
+  // 重置步骤
+  if (mode === 'simple') {
+    initSimpleMode();
+  } else {
+    initProMode();
+  }
+}
+
+function initSimpleMode() {
+  // 简单版：只显示前2步
+  document.querySelectorAll('.phase').forEach((p, i) => {
+    if (i < 2) {
+      p.style.display = 'block';
+      p.classList.add('active');
+    } else {
+      p.style.display = 'none';
+      p.classList.remove('active');
+    }
+  });
+  goStep(1, 'simple');
+}
+
+function initProMode() {
+  // 专业版：显示全部3步
+  document.querySelectorAll('.phase').forEach((p, i) => {
+    p.style.display = 'block';
+    p.classList.toggle('active', i === 0);
+  });
+  goStep(1, 'pro');
+}
 
 // ── 当前分析数据（内存中，可持久化） ──
 let reportData = null;
 let currentClientId = null;
 
 // ── 页面加载时检查是否有选中的客户 ─────────────────
-document.addEventListener('DOMContentLoaded', () => {
+function checkSelectedClient() {
   const selectedClientId = sessionStorage.getItem('selectedClientId');
   if (selectedClientId) {
+    console.log('从客户列表跳转，正在加载客户:', selectedClientId);
     loadClientToForm(selectedClientId);
     sessionStorage.removeItem('selectedClientId');
   }
-});
+}
+
+// 立即检查（如果 DOM 已加载完成）
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', checkSelectedClient);
+} else {
+  // DOM 已经加载完成
+  checkSelectedClient();
+}
 
 // ── 步骤导航 ──
-function goStep(n) {
-  console.log('goStep called with n=' + n);
+function goStep(n, mode) {
+  const targetMode = mode || currentMode;
+  console.log('goStep called with n=' + n + ', mode=' + targetMode);
+  
+  if (targetMode === 'simple') {
+    simpleGoStep(n);
+    return;
+  }
+  
+  // 专业版逻辑
   if (n === 2 && !validateStep1()) return;
   if (n === 3 && reportData === null) {
     toast('请先生成分析报告', 'warn');
@@ -263,15 +496,431 @@ function goStepNav(n) {
     // 跳转到未来步骤，需要按顺序验证
     let valid = true;
     for (let i = parseInt(currentStep) + 1; i <= targetStep; i++) {
-      if (i === 2 && !validateStep1()) {
-        valid = false;
-        break;
+      if (currentMode === 'simple') {
+        if (i === 2 && !simValidateStep1()) {
+          valid = false;
+          break;
+        }
+      } else {
+        if (i === 2 && !validateStep1()) {
+          valid = false;
+          break;
+        }
       }
     }
     if (valid) {
       goStep(targetStep);
     }
   }
+}
+
+// ════════════════════════════════════════════════════════════
+// 简单版表单函数
+// ════════════════════════════════════════════════════════════
+
+// 简单版自动计算储蓄额
+document.addEventListener('DOMContentLoaded', function() {
+  const incomeInput = document.getElementById('sim-income');
+  const expenseInput = document.getElementById('sim-expense');
+  const savingsInput = document.getElementById('sim-savings');
+  const savingsHint = document.getElementById('sim-savings-hint');
+  
+  if (incomeInput && expenseInput) {
+    const updateSavings = () => {
+      const income = parseFloat(incomeInput.value) || 0;
+      const expense = parseFloat(expenseInput.value) || 0;
+      const autoSavings = income - expense;
+      
+      if (autoSavings > 0) {
+        savingsHint.textContent = `💡 月储蓄额 = ${income} - ${expense} = ${autoSavings}`;
+        savingsHint.style.display = 'block';
+        if (!savingsInput.value) {
+          savingsInput.placeholder = autoSavings.toString();
+        }
+      } else {
+        savingsHint.style.display = 'none';
+      }
+    };
+    
+    incomeInput.addEventListener('input', updateSavings);
+    expenseInput.addEventListener('input', updateSavings);
+  }
+});
+
+function simValidateStep1() {
+  const name = document.getElementById('sim-name').value.trim();
+  const age = parseInt(document.getElementById('sim-age').value);
+  const income = parseFloat(document.getElementById('sim-income').value);
+  
+  if (!name) {
+    toast('请输入姓名', 'error');
+    return false;
+  }
+  if (!age || age < 18 || age > 100) {
+    toast('请输入有效年龄（18-100）', 'error');
+    return false;
+  }
+  if (!income || income <= 0) {
+    toast('请输入月收入', 'error');
+    return false;
+  }
+  return true;
+}
+
+function simGoStep(n) {
+  if (n === 2) {
+    if (!simValidateStep1()) return;
+    
+    // 更新确认页数据
+    const income = parseFloat(document.getElementById('sim-income').value) || 0;
+    const expense = parseFloat(document.getElementById('sim-expense').value) || 0;
+    const savings = income - expense;
+    const rate = income > 0 ? ((savings / income) * 100).toFixed(1) : 0;
+    
+    const currency = document.getElementById('sim-currency').value;
+    const fmtSymbol = { USD: '$', HKD: 'HK$', CNY: '¥', SGD: 'S$' }[currency] || '¥';
+    
+    document.getElementById('sim-confirm-income').textContent = fmtSymbol + income.toLocaleString();
+    document.getElementById('sim-confirm-expense').textContent = fmtSymbol + expense.toLocaleString();
+    document.getElementById('sim-confirm-savings').textContent = fmtSymbol + Math.max(0, savings).toLocaleString();
+    document.getElementById('sim-savings-rate').textContent = `储蓄率 ${rate}%`;
+    
+    // 更新储蓄额显示
+    if (document.getElementById('sim-savings').value) {
+      const customSavings = parseFloat(document.getElementById('sim-savings').value);
+      document.getElementById('sim-confirm-savings').textContent = fmtSymbol + Math.max(0, customSavings).toLocaleString();
+    }
+  }
+  
+  // 隐藏所有面板
+  document.querySelectorAll('.step-panel').forEach(p => p.style.display = 'none');
+  
+  // 显示目标面板
+  const targetPanel = document.getElementById('step' + n + '-simple');
+  if (targetPanel) {
+    targetPanel.style.display = 'block';
+  }
+  
+  // 更新步骤指示器
+  document.querySelectorAll('.phase').forEach(p => {
+    const s = parseInt(p.dataset.step);
+    p.classList.toggle('active', s === n);
+  });
+  
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function simCollectData() {
+  const income = parseFloat(document.getElementById('sim-income').value) || 0;
+  const expense = parseFloat(document.getElementById('sim-expense').value) || 0;
+  const savings = parseFloat(document.getElementById('sim-savings').value) || (income - expense);
+  
+  return {
+    name: document.getElementById('sim-name').value.trim(),
+    age: parseInt(document.getElementById('sim-age').value) || 35,
+    riskPref: document.getElementById('sim-risk').value,
+    currency: document.getElementById('sim-currency').value,
+    
+    // 收支
+    totalIncome: income,
+    monthlySurplus: savings,
+    totalExp: expense,
+    
+    // 资产（简单版只有总数）
+    totalAssets: parseFloat(document.getElementById('sim-assets').value) || 0,
+    
+    // 退休
+    retireAge: parseInt(document.getElementById('sim-retire').value) || 60,
+    retireNeed: parseFloat(document.getElementById('sim-retire-expense').value) || 0,
+    yearsToRetire: Math.max(0, (parseInt(document.getElementById('sim-retire').value) || 60) - (parseInt(document.getElementById('sim-age').value) || 35)),
+    
+    // 简单版标记
+    isSimple: true,
+    mode: 'simple'
+  };
+}
+
+function simGenerateReport() {
+  const data = simCollectData();
+  renderSimpleReport(data);
+  simGoStep(3);
+}
+
+function renderSimpleReport(data) {
+  const currency = data.currency;
+  const fmtSymbol = { USD: '$', HKD: 'HK$', CNY: '¥', SGD: 'S$' }[currency] || '¥';
+  
+  const fmt = (num) => {
+    if (!num || num === 0) return fmtSymbol + '0';
+    return fmtSymbol + num.toLocaleString();
+  };
+  
+  // 计算评分
+  const savingsRate = data.totalIncome > 0 ? data.monthlySurplus / data.totalIncome : 0;
+  let score = 50; // 基础分
+  
+  // 储蓄率评分
+  if (savingsRate >= 0.3) score += 25;
+  else if (savingsRate >= 0.2) score += 15;
+  else if (savingsRate >= 0.1) score += 5;
+  else if (savingsRate < 0) score -= 20;
+  
+  // 紧急预备金评分
+  if (data.totalAssets >= data.totalExp * 6) score += 15;
+  else if (data.totalAssets >= data.totalExp * 3) score += 10;
+  
+  // 资产充足度评分
+  if (data.totalAssets >= data.totalIncome * 12) score += 10;
+  else if (data.totalAssets >= data.totalIncome * 6) score += 5;
+  
+  score = Math.min(100, Math.max(0, score));
+  
+  // 评分标签
+  let scoreLabel = '需改善';
+  let scoreColor = 'var(--red)';
+  if (score >= 80) { scoreLabel = '优秀'; scoreColor = 'var(--green)'; }
+  else if (score >= 60) { scoreLabel = '良好'; scoreColor = 'var(--gold)'; }
+  else if (score >= 40) { scoreLabel = '一般'; scoreColor = 'var(--orange)'; }
+  
+  // 生成AI解读
+  const interpretation = generateSimpleInterpret(data, savingsRate, score);
+  
+  // 生成简单建议
+  const advices = generateSimpleAdvices(data, savingsRate);
+  
+  // 计算退休需求
+  let retireStatus = '';
+  let retireDetail = '';
+  if (data.retireNeed > 0) {
+    const yearsToRetire = data.yearsToRetire;
+    const retireGap = data.retireNeed - (data.monthlySurplus > 0 ? data.monthlySurplus * 0.5 : 0);
+    if (retireGap > 0) {
+      retireStatus = '⚠️ 有缺口';
+      retireDetail = `退休后月需求 ${fmt(data.retireNeed)}，需补充每月 ${fmt(retireGap)} 的被动收入`;
+    } else {
+      retireStatus = '✅ 基本达标';
+      retireDetail = '按当前储蓄率，有望实现退休目标';
+    }
+  } else {
+    retireStatus = '📝 未设定';
+    retireDetail = '建议填写退休后期望支出，获取更准确的规划';
+  }
+  
+  const html = `
+    <!-- 简单版报告头部 -->
+    <div class="simple-report-header">
+      <div class="badge">🌱 简单版分析</div>
+      <div class="title">${data.name} 的财务健康报告</div>
+      <div class="subtitle">${data.age}岁 · ${score}分 ${scoreLabel}</div>
+    </div>
+    
+    <!-- 评分卡片 -->
+    <div class="simple-score-card">
+      <div class="score-number" style="color: ${scoreColor}">${score}</div>
+      <div class="score-label">${scoreLabel}</div>
+      <div class="score-detail">
+        <div class="score-item">
+          <div class="val c-green">${(savingsRate * 100).toFixed(1)}%</div>
+          <div class="lbl">储蓄率</div>
+        </div>
+        <div class="score-item">
+          <div class="val c-gold">${fmt(data.totalAssets)}</div>
+          <div class="lbl">总资产</div>
+        </div>
+        <div class="score-item">
+          <div class="val c-blue">${data.yearsToRetire}年</div>
+          <div class="lbl">距退休</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 收支KPI -->
+    <div class="simple-kpi-grid">
+      <div class="simple-kpi">
+        <div class="lbl">月收入</div>
+        <div class="val c-green">${fmt(data.totalIncome)}</div>
+        <div class="sub">税后到账</div>
+      </div>
+      <div class="simple-kpi">
+        <div class="lbl">月支出</div>
+        <div class="val c-red">${fmt(data.totalExp)}</div>
+        <div class="sub">生活开支</div>
+      </div>
+      <div class="simple-kpi">
+        <div class="lbl">月储蓄</div>
+        <div class="val c-gold">${fmt(Math.max(0, data.monthlySurplus))}</div>
+        <div class="sub">可用于投资</div>
+      </div>
+    </div>
+    
+    <!-- AI顾问解读 -->
+    <div class="simple-interpret-card">
+      <div class="card-title">
+        <span>🤖</span> AI顾问解读
+        <button onclick="regenerateSimpleInterpret()" style="margin-left:auto;padding:6px 14px;font-size:12px;background:linear-gradient(135deg,var(--gold),var(--gold-light));color:var(--dark);border:none;border-radius:6px;cursor:pointer">
+          重新解读
+        </button>
+      </div>
+      <div class="content" id="sim-interpret-content">${interpretation}</div>
+    </div>
+    
+    <!-- 退休规划 -->
+    <div class="simple-interpret-card">
+      <div class="card-title">
+        <span>🏝️</span> 退休规划
+      </div>
+      <div class="content">${retireStatus}
+
+${retireDetail}</div>
+    </div>
+    
+    <!-- 行动建议 -->
+    <div class="simple-advice-card">
+      <div class="card-title">
+        <span>✅</span> 行动建议
+      </div>
+      ${advices.map(a => `
+        <div class="advice-item">
+          <div class="advice-icon">${a.icon}</div>
+          <div class="advice-content">
+            <div class="advice-title">${a.title}</div>
+            <div class="advice-desc">${a.desc}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    
+    <!-- 切换提示 -->
+    <div style="text-align:center;padding:20px;background:var(--card2);border-radius:12px;margin-top:20px">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:12px">💡 需要更详细的分析和资产配置建议？</div>
+      <button onclick="switchMode('pro')" class="btn btn-gold">切换到专业版 →</button>
+    </div>
+    
+    <!-- 免责声明 -->
+    <div style="text-align:center;font-size:11px;color:var(--text2);opacity:.5;padding:16px 0">
+      本报告由现金流规划助手简单版生成，仅供参考，不构成投资建议。<br>
+      所有数据仅在您的浏览器中处理，不会上传至任何服务器。
+    </div>
+  `;
+  
+  document.getElementById('simple-report-content').innerHTML = html;
+}
+
+function generateSimpleInterpret(data, savingsRate, score) {
+  const currency = data.currency;
+  const fmtSymbol = { USD: '$', HKD: 'HK$', CNY: '¥', SGD: 'S$' }[currency] || '¥';
+  const fmt = (num) => fmtSymbol + (num || 0).toLocaleString();
+  
+  // 生成个性化解读
+  let interpret = '';
+  
+  // 储蓄率分析
+  if (savingsRate >= 0.3) {
+    interpret += `🎉 您的储蓄率达到了 ${(savingsRate * 100).toFixed(1)}%，这在中国高净值人群中属于优秀水平！\n\n`;
+    interpret += `每月 ${fmt(data.monthlySurplus)} 的储蓄能力，为您的财富增长奠定了坚实基础。`;
+  } else if (savingsRate >= 0.2) {
+    interpret += `👍 您的储蓄率为 ${(savingsRate * 100).toFixed(1)}%，基本达标。\n\n`;
+    interpret += `每月 ${fmt(data.monthlySurplus)} 的结余，如果能坚持投资复利，长期来看会有不错的积累。`;
+  } else if (savingsRate >= 0.1) {
+    interpret += `📊 您的储蓄率为 ${(savingsRate * 100).toFixed(1)}%，有提升空间。\n\n`;
+    interpret += `建议审视每月开支，看看能否将储蓄率提升到 20% 以上。`;
+  } else {
+    interpret += `⚠️ 您的储蓄率偏低（月储蓄 ${fmt(data.monthlySurplus)}），需要重点关注开支管理。\n\n`;
+    interpret += `建议先从控制非必要开支开始，逐步提升储蓄率。`;
+  }
+  
+  // 资产分析
+  if (data.totalAssets > 0) {
+    const monthsOfAssets = data.totalAssets / data.totalExp;
+    if (monthsOfAssets >= 12) {
+      interpret += `\n\n🏦 您的总资产 ${fmt(data.totalAssets)} 可覆盖 ${Math.floor(monthsOfAssets)} 个月支出，紧急预备金较为充足。`;
+    } else if (monthsOfAssets >= 6) {
+      interpret += `\n\n💰 您的资产可覆盖约 ${Math.floor(monthsOfAssets)} 个月支出，建议继续积累至 12 个月。`;
+    } else {
+      interpret += `\n\n⚡ 建议优先积累 3-6 个月的紧急预备金（约 ${fmt(data.totalExp * 3)}-${fmt(data.totalExp * 6)}）。`;
+    }
+  } else {
+    interpret += `\n\n📝 建议记录您的资产情况，便于更好地规划财务目标。`;
+  }
+  
+  // 风险偏好建议
+  const riskLabels = {
+    conservative: '保守型',
+    moderate: '稳健型',
+    growth: '成长型',
+    aggressive: '激进型'
+  };
+  interpret += `\n\n🎯 您属于 ${riskLabels[data.riskPref]} 投资者，建议根据风险偏好选择合适的投资产品。`;
+  
+  return interpret;
+}
+
+function regenerateSimpleInterpret() {
+  const data = simCollectData();
+  const savingsRate = data.totalIncome > 0 ? data.monthlySurplus / data.totalIncome : 0;
+  let score = 50;
+  if (savingsRate >= 0.3) score += 25;
+  else if (savingsRate >= 0.2) score += 15;
+  else if (savingsRate >= 0.1) score += 5;
+  else if (savingsRate < 0) score -= 20;
+  if (data.totalAssets >= data.totalExp * 6) score += 15;
+  else if (data.totalAssets >= data.totalExp * 3) score += 10;
+  if (data.totalAssets >= data.totalIncome * 12) score += 10;
+  else if (data.totalAssets >= data.totalIncome * 6) score += 5;
+  score = Math.min(100, Math.max(0, score));
+  
+  const interpretation = generateSimpleInterpret(data, savingsRate, score);
+  document.getElementById('sim-interpret-content').innerHTML = interpretation;
+}
+
+function generateSimpleAdvices(data, savingsRate) {
+  const advices = [];
+  
+  // 紧急预备金建议
+  if (data.totalAssets < data.totalExp * 6) {
+    advices.push({
+      icon: '🏦',
+      title: '建立紧急预备金',
+      desc: `建议先积累 ${Math.ceil(data.totalExp * 6 / 10000) * 10000} 元，覆盖 6 个月支出。优先选择高流动性的货币基金或定期存款。`
+    });
+  }
+  
+  // 储蓄率建议
+  if (savingsRate < 0.2) {
+    advices.push({
+      icon: '💰',
+      title: '提升储蓄率至 20%+',
+      desc: '建议每月先储蓄后消费，将储蓄自动化。可以考虑减少非必要开支或增加收入来源。'
+    });
+  } else {
+    advices.push({
+      icon: '✅',
+      title: '保持储蓄习惯',
+      desc: '您的储蓄率良好，建议将每月结余的 50% 用于投资增值，50% 继续积累。'
+    });
+  }
+  
+  // 退休规划建议
+  if (data.retireNeed > 0) {
+    const monthlyNeeded = data.retireNeed;
+    const currentSurplus = data.monthlySurplus;
+    if (currentSurplus > 0 && monthlyNeeded > currentSurplus * 0.5) {
+      advices.push({
+        icon: '🏝️',
+        title: '关注退休规划',
+        desc: `退休后期望月支出 ${monthlyNeeded} 元，建议通过储蓄险或指数基金建立被动收入。`
+      });
+    }
+  }
+  
+  // 保险建议
+  advices.push({
+    icon: '🛡️',
+    title: '配置基础保障',
+    desc: '建议配置医疗险和意外险，每年保费控制在年收入的 5-10%，转移重大风险。'
+  });
+  
+  return advices.slice(0, 4); // 最多4条建议
 }
 
 function validateStep1() {
@@ -646,6 +1295,19 @@ function renderReport(raw, d) {
             <div class="pt"><div class="pf" style="width:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light))}"></div></div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- AI顾问解读 -->
+    <div class="card gb" style="margin-bottom:24px">
+      <div class="card-title">
+        <span class="ico">🤖</span> AI顾问解读
+        <button class="btn-small" onclick="triggerAIInterpret()" style="float:right;margin-top:-4px;padding:6px 14px;font-size:12px;background:linear-gradient(135deg,var(--gold),var(--gold-light));color:#fff;border:none;border-radius:6px;cursor:pointer">
+          生成解读
+        </button>
+      </div>
+      <div id="ai-interpret-box" style="font-size:14px;line-height:1.8;color:var(--text1);white-space:pre-line;padding:12px;background:var(--card2);border-radius:8px">
+        点击上方"生成解读"按钮，AI将根据你的财务状况，为你生成个性化解读和建议...
       </div>
     </div>
 
@@ -1077,6 +1739,30 @@ function showPrintGuide() {
     '</div>';
   
   document.body.appendChild(modal);
+}
+
+// ── 生成AI解读 ──
+function triggerAIInterpret() {
+  if (!reportData) {
+    toast('请先生成分析报告', 'warn');
+    return;
+  }
+
+  const aiBox = document.getElementById('ai-interpret-box');
+  aiBox.innerHTML = '🤖 AI正在为你生成个性化解读...';
+
+  // 使用setTimeout让UI先更新，再执行计算
+  setTimeout(() => {
+    try {
+      const interpretation = generateAIInterpret(reportData);
+      aiBox.innerHTML = interpretation;
+      toast('AI解读生成成功', 'success');
+    } catch (e) {
+      console.error('AI解读生成失败:', e);
+      aiBox.innerHTML = '解读生成失败，请重试。';
+      toast('解读生成失败', 'warn');
+    }
+  }, 100);
 }
 </script>
 </body>
