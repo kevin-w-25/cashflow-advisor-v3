@@ -478,7 +478,7 @@ function goStep(n, mode) {
   console.log('goStep called with n=' + n + ', mode=' + targetMode);
   
   if (targetMode === 'simple') {
-    simpleGoStep(n);
+    simGoStep(n);
     return;
   }
   
@@ -689,28 +689,24 @@ function simCollectData() {
 function simGenerateReport() {
   const data = simCollectData();
   
-  // ── 转换为专业版格式并保存到客户档案 ──
-  const raw = convertSimpleToProFormat(data);
-  const derived = deriveSimpleData(raw);
-  
-  // 检查是否已有同名客户
-  const existingClient = findClientByName(raw.name);
-  if (existingClient) {
-    if (confirm(`检测到已存在同名客户「${raw.name}」。\n\n是否更新该客户的档案？\n\n点击"确定"更新现有档案，点击"取消"创建新档案。`)) {
-      raw.id = existingClient.id; // 使用现有客户的 ID
-    }
-  }
-  
-  // 保存到客户档案
-  const clientId = saveClientData(raw, derived, true);
-  if (clientId) {
-    currentClientId = clientId;
-    console.log(`简单版数据已保存: ${clientId}`);
-  }
-  
   // 生成报告
   renderSimpleReport(data);
   simGoStep(3);
+  
+  // ── 转换为专业版格式并保存到客户档案 ──
+  try {
+    const raw = convertSimpleToProFormat(data);
+    const derived = deriveSimpleData(raw);
+    
+    // 保存到客户档案
+    const clientId = saveClientData(raw, derived, true);
+    if (clientId) {
+      currentClientId = clientId;
+      console.log(`简单版数据已保存: ${clientId}`);
+    }
+  } catch (e) {
+    console.error('保存失败:', e);
+  }
 }
 
 // ── 将简单版数据转换为专业版格式 ──
