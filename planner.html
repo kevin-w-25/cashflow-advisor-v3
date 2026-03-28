@@ -44,8 +44,8 @@
   <!-- 步骤指示器 -->
   <div class="phases" id="phases">
     <div class="phase" data-step="1" onclick="goStepNav(1)"><span class="pn">1</span><span class="phase-label">基本信息</span></div>
-    <div class="phase" data-step="2" onclick="goStepNav(2)"><span class="pn">2</span><span class="phase-label">收支数据</span></div>
-    <div class="phase" data-step="3" onclick="goStepNav(3)"><span class="pn">3</span><span class="phase-label">分析报告</span></div>
+    <div class="phase" data-step="2" onclick="goStepNav(2)"><span class="pn">2</span><span class="phase-label">收支确认</span></div>
+    <div class="phase" data-step="3" onclick="goStepNav(3)"><span class="pn">3</span><span class="phase-label">分析推导</span></div>
   </div>
 
   <!-- ═══════ SIMPLE STEP 1: 简单版基本信息 ═══════ -->
@@ -95,15 +95,32 @@
     <div class="simple-form-card">
       <div class="card-title"><span class="ico">💰</span> 月度收支</div>
       <div class="frow">
-        <div class="fg"><label>月收入（税后）</label><div class="unit"><input type="number" id="sim-income" placeholder="如：30000"/><span class="uf">/月</span></div></div>
-        <div class="fg"><label>月支出（估算）</label><div class="unit"><input type="number" id="sim-expense" placeholder="如：15000"/><span class="uf">/月</span></div></div>
+        <div class="fg"><label>主动收入（月薪等）</label><div class="unit"><input type="number" id="sim-active-income" placeholder="如：30000"/><span class="uf">/月</span></div></div>
+        <div class="fg"><label>被动收入（租金/分红等）</label><div class="unit"><input type="number" id="sim-passive-income" placeholder="如：2000" value="0"/><span class="uf">/月</span></div></div>
       </div>
       <div class="frow">
+        <div class="fg"><label>月支出（估算）</label><div class="unit"><input type="number" id="sim-expense" placeholder="如：15000"/><span class="uf">/月</span></div></div>
         <div class="fg"><label>月储蓄额（可选）</label><div class="unit"><input type="number" id="sim-savings" placeholder="自动计算"/><span class="uf">/月</span></div></div>
-        <div class="fg"><label>当前总资产（可选）</label><div class="unit"><input type="number" id="sim-assets" placeholder="如：500000"/><span class="uf">总额</span></div></div>
       </div>
       <div id="sim-savings-hint" style="margin-top:8px;font-size:12px;color:var(--text2);display:none">
-        💡 月储蓄额 = 月收入 - 月支出
+        💡 月储蓄额 = 主动收入 - 月支出（被动收入不计入储蓄计算）
+      </div>
+    </div>
+
+    <div class="simple-form-card">
+      <div class="card-title"><span class="ico">💎</span> 资产情况（选填）</div>
+      <div style="margin-bottom:12px;padding:10px 14px;background:rgba(77,143,255,0.08);border:1px solid rgba(77,143,255,0.2);border-radius:8px;font-size:11px;color:var(--text2);line-height:1.6">
+        <strong style="color:var(--blue)">💵 现金类：</strong>随时可取，无损失风险<br>
+        包含：现金、活期存款、货币基金、余额宝<br><br>
+        <strong style="color:var(--gold)">💎 非现金类：</strong>变现需要时间或有条件<br>
+        包含：定期存款、股票基金、债券、储蓄险、房产、黄金、信托
+      </div>
+      <div class="frow">
+        <div class="fg"><label>💵 现金类资产</label><div class="unit"><input type="number" id="sim-cash-assets" placeholder="如：100000" value="0"/><span class="uf">总额</span></div></div>
+        <div class="fg"><label>💎 非现金类资产</label><div class="unit"><input type="number" id="sim-non-cash-assets" placeholder="如：400000" value="0"/><span class="uf">总额</span></div></div>
+      </div>
+      <div id="sim-total-assets-hint" style="margin-top:8px;font-size:12px;color:var(--text2);display:none">
+        💡 总资产 = 现金类 + 非现金类
       </div>
     </div>
 
@@ -520,37 +537,59 @@ function goStepNav(n) {
 
 // 简单版自动计算储蓄额
 document.addEventListener('DOMContentLoaded', function() {
-  const incomeInput = document.getElementById('sim-income');
+  const activeIncomeInput = document.getElementById('sim-active-income');
   const expenseInput = document.getElementById('sim-expense');
   const savingsInput = document.getElementById('sim-savings');
   const savingsHint = document.getElementById('sim-savings-hint');
+  const cashAssetsInput = document.getElementById('sim-cash-assets');
+  const nonCashAssetsInput = document.getElementById('sim-non-cash-assets');
+  const totalAssetsHint = document.getElementById('sim-total-assets-hint');
   
-  if (incomeInput && expenseInput) {
-    const updateSavings = () => {
-      const income = parseFloat(incomeInput.value) || 0;
-      const expense = parseFloat(expenseInput.value) || 0;
-      const autoSavings = income - expense;
-      
+  const updateSavings = () => {
+    const activeIncome = parseFloat(activeIncomeInput?.value) || 0;
+    const expense = parseFloat(expenseInput?.value) || 0;
+    const autoSavings = activeIncome - expense;
+    
+    if (savingsHint) {
       if (autoSavings > 0) {
-        savingsHint.textContent = `💡 月储蓄额 = ${income} - ${expense} = ${autoSavings}`;
+        savingsHint.textContent = `💡 月储蓄额 = ${activeIncome.toLocaleString()} - ${expense.toLocaleString()} = ${autoSavings.toLocaleString()}（不含被动收入）`;
         savingsHint.style.display = 'block';
-        if (!savingsInput.value) {
+        if (savingsInput && !savingsInput.value) {
           savingsInput.placeholder = autoSavings.toString();
         }
       } else {
         savingsHint.style.display = 'none';
       }
-    };
-    
-    incomeInput.addEventListener('input', updateSavings);
+    }
+  };
+  
+  const updateTotalAssets = () => {
+    const cash = parseFloat(cashAssetsInput?.value) || 0;
+    const nonCash = parseFloat(nonCashAssetsInput?.value) || 0;
+    if (totalAssetsHint) {
+      if (cash > 0 || nonCash > 0) {
+        totalAssetsHint.textContent = `💡 总资产 = ¥${(cash + nonCash).toLocaleString()}`;
+        totalAssetsHint.style.display = 'block';
+      } else {
+        totalAssetsHint.style.display = 'none';
+      }
+    }
+  };
+  
+  if (activeIncomeInput && expenseInput) {
+    activeIncomeInput.addEventListener('input', updateSavings);
     expenseInput.addEventListener('input', updateSavings);
+  }
+  if (cashAssetsInput && nonCashAssetsInput) {
+    cashAssetsInput.addEventListener('input', updateTotalAssets);
+    nonCashAssetsInput.addEventListener('input', updateTotalAssets);
   }
 });
 
 function simValidateStep1() {
   const name = document.getElementById('sim-name').value.trim();
   const age = parseInt(document.getElementById('sim-age').value);
-  const income = parseFloat(document.getElementById('sim-income').value);
+  const activeIncome = parseFloat(document.getElementById('sim-active-income').value);
   
   if (!name) {
     toast('请输入姓名', 'error');
@@ -560,8 +599,8 @@ function simValidateStep1() {
     toast('请输入有效年龄（18-100）', 'error');
     return false;
   }
-  if (!income || income <= 0) {
-    toast('请输入月收入', 'error');
+  if (!activeIncome || activeIncome <= 0) {
+    toast('请输入主动收入', 'error');
     return false;
   }
   return true;
@@ -572,24 +611,20 @@ function simGoStep(n) {
     if (!simValidateStep1()) return;
     
     // 更新确认页数据
-    const income = parseFloat(document.getElementById('sim-income').value) || 0;
+    const activeIncome = parseFloat(document.getElementById('sim-active-income').value) || 0;
+    const passiveIncome = parseFloat(document.getElementById('sim-passive-income').value) || 0;
+    const totalIncome = activeIncome + passiveIncome;
     const expense = parseFloat(document.getElementById('sim-expense').value) || 0;
-    const savings = income - expense;
-    const rate = income > 0 ? ((savings / income) * 100).toFixed(1) : 0;
+    const savings = parseFloat(document.getElementById('sim-savings').value) || (activeIncome - expense);
+    const rate = activeIncome > 0 ? ((Math.max(0, savings) / activeIncome) * 100).toFixed(1) : 0;
     
     const currency = document.getElementById('sim-currency').value;
     const fmtSymbol = { USD: '$', HKD: 'HK$', CNY: '¥', SGD: 'S$' }[currency] || '¥';
     
-    document.getElementById('sim-confirm-income').textContent = fmtSymbol + income.toLocaleString();
+    document.getElementById('sim-confirm-income').textContent = fmtSymbol + totalIncome.toLocaleString();
     document.getElementById('sim-confirm-expense').textContent = fmtSymbol + expense.toLocaleString();
     document.getElementById('sim-confirm-savings').textContent = fmtSymbol + Math.max(0, savings).toLocaleString();
-    document.getElementById('sim-savings-rate').textContent = `储蓄率 ${rate}%`;
-    
-    // 更新储蓄额显示
-    if (document.getElementById('sim-savings').value) {
-      const customSavings = parseFloat(document.getElementById('sim-savings').value);
-      document.getElementById('sim-confirm-savings').textContent = fmtSymbol + Math.max(0, customSavings).toLocaleString();
-    }
+    document.getElementById('sim-savings-rate').textContent = `主动储蓄率 ${rate}%（基于主动收入）`;
   }
   
   // 隐藏所有面板
@@ -611,28 +646,39 @@ function simGoStep(n) {
 }
 
 function simCollectData() {
-  const income = parseFloat(document.getElementById('sim-income').value) || 0;
+  const activeIncome = parseFloat(document.getElementById('sim-active-income').value) || 0;
+  const passiveIncome = parseFloat(document.getElementById('sim-passive-income').value) || 0;
+  const totalIncome = activeIncome + passiveIncome;
   const expense = parseFloat(document.getElementById('sim-expense').value) || 0;
-  const savings = parseFloat(document.getElementById('sim-savings').value) || (income - expense);
+  const savings = parseFloat(document.getElementById('sim-savings').value) || Math.max(0, activeIncome - expense);
+  const cashAssets = parseFloat(document.getElementById('sim-cash-assets').value) || 0;
+  const nonCashAssets = parseFloat(document.getElementById('sim-non-cash-assets').value) || 0;
+  const totalAssets = cashAssets + nonCashAssets;
+  const retireAge = parseInt(document.getElementById('sim-retire').value) || 60;
+  const age = parseInt(document.getElementById('sim-age').value) || 35;
   
   return {
     name: document.getElementById('sim-name').value.trim(),
-    age: parseInt(document.getElementById('sim-age').value) || 35,
+    age: age,
     riskPref: document.getElementById('sim-risk').value,
     currency: document.getElementById('sim-currency').value,
     
     // 收支
-    totalIncome: income,
+    activeIncome: activeIncome,
+    passiveIncome: passiveIncome,
+    totalIncome: totalIncome,
     monthlySurplus: savings,
     totalExp: expense,
     
-    // 资产（简单版只有总数）
-    totalAssets: parseFloat(document.getElementById('sim-assets').value) || 0,
+    // 资产
+    cashAssets: cashAssets,
+    nonCashAssets: nonCashAssets,
+    totalAssets: totalAssets,
     
     // 退休
-    retireAge: parseInt(document.getElementById('sim-retire').value) || 60,
+    retireAge: retireAge,
     retireNeed: parseFloat(document.getElementById('sim-retire-expense').value) || 0,
-    yearsToRetire: Math.max(0, (parseInt(document.getElementById('sim-retire').value) || 60) - (parseInt(document.getElementById('sim-age').value) || 35)),
+    yearsToRetire: Math.max(0, retireAge - age),
     
     // 简单版标记
     isSimple: true,
@@ -642,8 +688,126 @@ function simCollectData() {
 
 function simGenerateReport() {
   const data = simCollectData();
+  
+  // ── 转换为专业版格式并保存到客户档案 ──
+  const raw = convertSimpleToProFormat(data);
+  const derived = deriveSimpleData(raw);
+  
+  // 检查是否已有同名客户
+  const existingClient = findClientByName(raw.name);
+  if (existingClient) {
+    if (confirm(`检测到已存在同名客户「${raw.name}」。\n\n是否更新该客户的档案？\n\n点击"确定"更新现有档案，点击"取消"创建新档案。`)) {
+      raw.id = existingClient.id; // 使用现有客户的 ID
+    }
+  }
+  
+  // 保存到客户档案
+  const clientId = saveClientData(raw, derived, true);
+  if (clientId) {
+    currentClientId = clientId;
+    console.log(`简单版数据已保存: ${clientId}`);
+  }
+  
+  // 生成报告
   renderSimpleReport(data);
   simGoStep(3);
+}
+
+// ── 将简单版数据转换为专业版格式 ──
+function convertSimpleToProFormat(simpleData) {
+  return {
+    id: simpleData.id, // 如果有的话
+    name: simpleData.name,
+    age: simpleData.age,
+    retireAge: simpleData.retireAge,
+    riskPref: simpleData.riskPref,
+    currency: simpleData.currency,
+    emergencyMonths: 6, // 默认值
+    
+    // 流动性资产：现金类
+    cash: simpleData.cashAssets || 0,
+    moneyFund: 0,
+    
+    // 保障型资产
+    savingsPlan: 0,
+    bonds: 0,
+    
+    // 投资型资产：非现金类
+    stocks: 0,
+    trust: 0,
+    property: 0,
+    gold: 0,
+    alternatives: simpleData.nonCashAssets || 0,
+    otherInvest: 0,
+    
+    // 收入
+    activeIncome: simpleData.activeIncome,
+    passiveIncome: simpleData.passiveIncome,
+    
+    // 支出（简化）
+    housing: Math.round((simpleData.totalExp * 0.3) / 12) || 0,    // 估算30%用于住房
+    propertyFee: 0,
+    daily: Math.round((simpleData.totalExp * 0.4) / 12) || 0,      // 估算40%用于日常
+    transport: Math.round((simpleData.totalExp * 0.1) / 12) || 0,   // 估算10%用于交通
+    medical: Math.round((simpleData.totalExp * 0.1) / 12) || 0,    // 估算10%用于医疗
+    education: 0,
+    premiumExp: 0,
+    debtExp: 0,
+    flexExp: Math.round((simpleData.totalExp * 0.1) / 12) || 0,    // 估算10%弹性支出
+    otherExp: 0,
+    
+    // 目标
+    retireNeed: simpleData.retireNeed,
+    eduGoal: 0,
+    eduYears: 8,
+    legacyWish: 'none',
+    
+    // 标记为简单版
+    isSimple: true,
+    mode: 'simple'
+  };
+}
+
+// ── 计算简单版数据的衍生数据 ──
+function deriveSimpleData(raw) {
+  const d = { ...raw };
+  
+  // 总资产
+  d.totalAssets = d.cash + d.moneyFund + d.savingsPlan + d.bonds + 
+                  d.stocks + d.trust + d.property + d.gold + 
+                  d.alternatives + d.otherInvest;
+  
+  // 总收入
+  d.totalIncome = d.activeIncome + d.passiveIncome;
+  
+  // 总支出
+  d.totalExp = d.housing + d.propertyFee + d.daily + d.transport + 
+               d.medical + d.education + d.premiumExp + d.debtExp + 
+               d.flexExp + d.otherExp;
+  
+  // 月度结余
+  d.monthlySurplus = d.totalIncome - d.totalExp;
+  
+  // 储蓄率
+  d.savingsRate = d.totalIncome > 0 ? d.monthlySurplus / d.totalIncome : 0;
+  
+  // 紧急预备金覆盖月数
+  d.emergencyCoverage = d.totalExp > 0 ? (d.cash + d.moneyFund) / d.totalExp : 0;
+  
+  // 被动收入占比
+  d.passiveRatio = d.totalIncome > 0 ? d.passiveIncome / d.totalIncome : 0;
+  
+  // 退休年限
+  d.yearsToRetire = Math.max(0, d.retireAge - d.age);
+  
+  // 债务比（简单版默认为0）
+  d.debtRatio = 0;
+  
+  // 计算评分
+  const derivedWithScores = calcScores(d);
+  d.scores = derivedWithScores;
+  
+  return d;
 }
 
 function renderSimpleReport(data) {
@@ -651,277 +815,465 @@ function renderSimpleReport(data) {
   const fmtSymbol = { USD: '$', HKD: 'HK$', CNY: '¥', SGD: 'S$' }[currency] || '¥';
   
   const fmt = (num) => {
-    if (!num || num === 0) return fmtSymbol + '0';
-    return fmtSymbol + num.toLocaleString();
+    if (!num || isNaN(num) || num === 0) return fmtSymbol + '0';
+    return fmtSymbol + Math.round(num).toLocaleString();
   };
   
-  // 计算评分
-  const savingsRate = data.totalIncome > 0 ? data.monthlySurplus / data.totalIncome : 0;
-  let score = 50; // 基础分
+  const fmtDec = (num, dec = 1) => {
+    if (!num || isNaN(num)) return '0';
+    return num.toFixed(dec);
+  };
+
+  // ── 投资假设常量 ──
+  const CASH_RETURN = 0.02;    // 现金类年化 2%
+  const NONCASH_RETURN = 0.04; // 非现金类年化 4%（内地均衡配置中性预测）
+  const WITHDRAW_RATE = 0.04; // 4% 安全提取率
+  const INFLATION_RATE = 0.025; // 通胀率 2.5%
+
+  // ── 三维度评分计算 ──
+  const activeIncome = data.activeIncome || 0;
+  const passiveIncome = data.passiveIncome || 0;
+  const totalExp = data.totalExp || 1;
+  const monthlySavings = data.monthlySurplus || 0;
+  const cashAssets = data.cashAssets || 0;
+  const nonCashAssets = data.nonCashAssets || 0;
+  const totalAssets = cashAssets + nonCashAssets;
+
+  // 维度1: 储蓄能力（40分）
+  // 主动储蓄率 = 主动储蓄 / 主动收入
+  const activeSavingsRate = activeIncome > 0 ? Math.max(0, monthlySavings) / activeIncome : 0;
+  const savingsScore = Math.min(40, activeSavingsRate * 40);
+  const savingsMonths = activeIncome > 0 ? (activeIncome - totalExp) : 0;
+  const savingsLabel = activeSavingsRate >= 0.3 ? '优秀' : activeSavingsRate >= 0.2 ? '良好' : activeSavingsRate >= 0.1 ? '一般' : '需改善';
+  const savingsColor = activeSavingsRate >= 0.3 ? 'var(--green)' : activeSavingsRate >= 0.2 ? 'var(--gold)' : 'var(--orange)';
+
+  // 维度2: 应急储备（30分）
+  // 覆盖月数 = 现金类资产 / 月支出
+  const emergencyMonths = totalExp > 0 ? cashAssets / totalExp : 0;
+  const emergencyScore = Math.min(30, (emergencyMonths / 6) * 30);
+  const emergencyLabel = emergencyMonths >= 12 ? '充裕' : emergencyMonths >= 6 ? '达标' : emergencyMonths >= 3 ? '偏少' : '不足';
+  const emergencyColor = emergencyMonths >= 6 ? 'var(--green)' : emergencyMonths >= 3 ? 'var(--gold)' : 'var(--red)';
+
+  // 维度3: 财务韧性（30分）
+  // 被动收入覆盖率 = 被动收入 / 月支出
+  const passiveCoverage = totalExp > 0 ? passiveIncome / totalExp : 0;
+  const resilienceScore = Math.min(30, passiveCoverage * 30);
+  const resilienceLabel = passiveCoverage >= 1 ? '很强' : passiveCoverage >= 0.5 ? '良好' : passiveCoverage >= 0.2 ? '一般' : '需建立';
+  const resilienceColor = passiveCoverage >= 0.5 ? 'var(--green)' : passiveCoverage >= 0.2 ? 'var(--gold)' : 'var(--orange)';
+
+  // 总分
+  const totalScore = Math.round(savingsScore + emergencyScore + resilienceScore);
+  const scoreGrade = totalScore >= 80 ? { label: '优秀', color: 'var(--green)' } :
+                     totalScore >= 60 ? { label: '良好', color: 'var(--gold)' } :
+                     totalScore >= 40 ? { label: '一般', color: 'var(--orange)' } :
+                     { label: '需改善', color: 'var(--red)' };
+
+  // ── 退休推演 ──
+  const yearsToRetire = data.yearsToRetire || 1;
+  const retireNeed = data.retireNeed || 0;
+
+  // 资产增长计算
+  const cashGrowth = cashAssets * Math.pow(1 + CASH_RETURN, yearsToRetire);
+  const nonCashGrowth = nonCashAssets * Math.pow(1 + NONCASH_RETURN, yearsToRetire);
+  // 假设50%的月储蓄用于投资增值
+  const investableSavings = monthlySavings > 0 ? monthlySavings * 0.5 : 0;
+  const savingsGrowth = investableSavings * 12 * yearsToRetire;
+  const futureTotalAssets = cashGrowth + nonCashGrowth + savingsGrowth;
+
+  // 退休月现金流
+  const withdrawMonthly = futureTotalAssets * WITHDRAW_RATE / 12;
+  const passiveIncomeFuture = passiveIncome * Math.pow(1 + INFLATION_RATE, yearsToRetire);
+  const retireMonthlyCashFlow = withdrawMonthly + passiveIncomeFuture;
+
+  // 退休时今日购买力等效支出（考虑通胀）
+  const retireNeedFuture = retireNeed * Math.pow(1 + INFLATION_RATE, yearsToRetire);
+  const retireGap = retireNeedFuture - retireMonthlyCashFlow;
+
+  // ── 差距分析 ──
+  const retireNeedStatus = retireNeed > 0 ?
+    (retireGap > 0 ? { label: '⚠️ 有缺口', color: 'var(--red)', gap: retireGap } :
+                      { label: '✅ 基本达标', color: 'var(--green)', gap: 0 }) :
+    { label: '📝 未设定退休目标', color: 'var(--text2)', gap: null };
+
+  // ── 生成行动建议 ──
+  const advices = [];
   
-  // 储蓄率评分
-  if (savingsRate >= 0.3) score += 25;
-  else if (savingsRate >= 0.2) score += 15;
-  else if (savingsRate >= 0.1) score += 5;
-  else if (savingsRate < 0) score -= 20;
-  
-  // 紧急预备金评分
-  if (data.totalAssets >= data.totalExp * 6) score += 15;
-  else if (data.totalAssets >= data.totalExp * 3) score += 10;
-  
-  // 资产充足度评分
-  if (data.totalAssets >= data.totalIncome * 12) score += 10;
-  else if (data.totalAssets >= data.totalIncome * 6) score += 5;
-  
-  score = Math.min(100, Math.max(0, score));
-  
-  // 评分标签
-  let scoreLabel = '需改善';
-  let scoreColor = 'var(--red)';
-  if (score >= 80) { scoreLabel = '优秀'; scoreColor = 'var(--green)'; }
-  else if (score >= 60) { scoreLabel = '良好'; scoreColor = 'var(--gold)'; }
-  else if (score >= 40) { scoreLabel = '一般'; scoreColor = 'var(--orange)'; }
-  
-  // 生成AI解读
-  const interpretation = generateSimpleInterpret(data, savingsRate, score);
-  
-  // 生成简单建议
-  const advices = generateSimpleAdvices(data, savingsRate);
-  
-  // 计算退休需求
-  let retireStatus = '';
-  let retireDetail = '';
-  if (data.retireNeed > 0) {
-    const yearsToRetire = data.yearsToRetire;
-    const retireGap = data.retireNeed - (data.monthlySurplus > 0 ? data.monthlySurplus * 0.5 : 0);
-    if (retireGap > 0) {
-      retireStatus = '⚠️ 有缺口';
-      retireDetail = `退休后月需求 ${fmt(data.retireNeed)}，需补充每月 ${fmt(retireGap)} 的被动收入`;
-    } else {
-      retireStatus = '✅ 基本达标';
-      retireDetail = '按当前储蓄率，有望实现退休目标';
-    }
-  } else {
-    retireStatus = '📝 未设定';
-    retireDetail = '建议填写退休后期望支出，获取更准确的规划';
+  // 建议1: 被动收入（财务韧性低）
+  if (resilienceScore < 15) {
+    const targetPassive = totalExp * 0.3;
+    const gap = Math.max(0, targetPassive - passiveIncome);
+    advices.push({
+      priority: 'high',
+      icon: '📈',
+      title: '建立被动收入流',
+      problem: `您的被动收入覆盖率仅${fmtDec(passiveCoverage * 100)}%（¥${Math.round(passiveIncome)}/月），远低于30%的健康线。`,
+      target: `目标：每月被动收入达到 ¥${Math.round(targetPassive).toLocaleString()}（覆盖30%支出）`,
+      actions: [
+        '配置储蓄分红险：每月定投 ¥2,000，20年后每月可领 ¥4,000+',
+        '建立股息组合：配置高分红ETF（如上证红利、中证红利），年化股息约4-5%',
+        '如有条件，考虑小户型收租'
+      ],
+      effect: '完成后：财务韧性大幅提升，即使暂时失去工作也有收入保障'
+    });
   }
-  
+
+  // 建议2: 应急储备（现金不足6个月）
+  if (emergencyScore < 25) {
+    const targetEmergency = totalExp * 6;
+    const gap = Math.max(0, targetEmergency - cashAssets);
+    advices.push({
+      priority: gap > totalExp * 3 ? 'high' : 'medium',
+      icon: '🏦',
+      title: '补充应急储备至6个月',
+      problem: `您的现金类资产 ¥${Math.round(cashAssets).toLocaleString()}，覆盖 ${fmtDec(emergencyMonths)} 个月支出。距6个月标准还差约 ¥${Math.round(gap).toLocaleString()}。`,
+      target: `目标：现金类资产达到 ¥${Math.round(targetEmergency).toLocaleString()}（覆盖6个月）`,
+      actions: [
+        `优先从下月储蓄中拨出 ¥${Math.round(Math.min(gap, monthlySavings)).toLocaleString()} 补充应急基金`,
+        '应急资金首选货币基金（灵活存取，2%左右收益）',
+        '也可考虑3-6个月定期存款，兼顾收益与流动性'
+      ],
+      effect: '完成后：财务安全垫更稳固，可应对失业/重病等突发情况'
+    });
+  }
+
+  // 建议3: 储蓄能力（储蓄率偏低）
+  if (savingsScore < 24) {
+    const targetSavingsRate = 0.3;
+    const currentRate = activeSavingsRate;
+    advices.push({
+      priority: 'medium',
+      icon: '💰',
+      title: '提升主动储蓄率',
+      problem: `您的主动储蓄率为 ${fmtDec(currentRate * 100)}%，低于30%的优秀线。每月少存 ¥${Math.round((targetSavingsRate - currentRate) * activeIncome).toLocaleString()}。`,
+      target: `目标：储蓄率提升至30%以上，每月多存 ¥${Math.round((targetSavingsRate - currentRate) * activeIncome).toLocaleString()}`,
+      actions: [
+        '工资到账后立即转出10-20%到独立储蓄账户（先存后花）',
+        '审视每月固定支出，看哪些可以压缩（会员订阅、外卖等）',
+        '考虑提升技能增加主动收入来源'
+      ],
+      effect: '完成后：财富积累速度提升50%+，复利效应显著'
+    });
+  }
+
+  // 建议4: 退休规划（有目标但缺口大）
+  if (retireNeed > 0 && retireGap > 0) {
+    const monthlyTopUp = retireGap / (Math.pow(1 + NONCASH_RETURN, yearsToRetire) * WITHDRAW_RATE / 12);
+    advices.push({
+      priority: retireGap > retireMonthlyCashFlow * 0.5 ? 'high' : 'medium',
+      icon: '🏝️',
+      title: '弥补退休资金缺口',
+      problem: `按当前情况，退休后月现金流约 ¥${Math.round(retireMonthlyCashFlow).toLocaleString()}，但实际购买力需求约 ¥${Math.round(retireNeedFuture).toLocaleString()}，缺口 ¥${Math.round(retireGap).toLocaleString()}/月。`,
+      target: `方案：增加月储蓄 ¥${Math.round(monthlyTopUp).toLocaleString()}，或延后3-5年退休`,
+      actions: [
+        `方案A：增加月储蓄 ¥${Math.round(monthlyTopUp).toLocaleString()}，通过复利积累弥补缺口`,
+        '方案B：适当降低退休前期望支出，改为退休后再调整',
+        '方案C：考虑延后退休3-5年，多积累时间'
+      ],
+      effect: '完成后：退休现金流可覆盖期望支出，实现财务独立'
+    });
+  }
+
+  // 建议5: 保障配置（通用）
+  advices.push({
+    priority: 'low',
+    icon: '🛡️',
+    title: '配置基础风险保障',
+    problem: '财务规划中，保障是基础。没有保障，一场大病可能耗尽多年积累。',
+    target: '年保费控制在年收入5-10%以内',
+    actions: [
+      '百万医疗险：30岁约 ¥300/年，覆盖大病风险',
+      '综合意外险：约 ¥150-300/年，保障意外伤残',
+      '定期寿险：家庭经济支柱必备，保额为年收入的5-10倍'
+    ],
+    effect: '完成后：重大风险得到转移，财务规划更稳固'
+  });
+
+  // ── 生成报告HTML ──
   const html = `
-    <!-- 简单版报告头部 -->
+    <!-- 报告头部 -->
     <div class="simple-report-header">
       <div class="badge">🌱 简单版分析</div>
       <div class="title">${data.name} 的财务健康报告</div>
-      <div class="subtitle">${data.age}岁 · ${score}分 ${scoreLabel}</div>
+      <div class="subtitle">${data.age}岁 · 距退休 ${yearsToRetire}年</div>
     </div>
-    
-    <!-- 评分卡片 -->
-    <div class="simple-score-card">
-      <div class="score-number" style="color: ${scoreColor}">${score}</div>
-      <div class="score-label">${scoreLabel}</div>
-      <div class="score-detail">
-        <div class="score-item">
-          <div class="val c-green">${(savingsRate * 100).toFixed(1)}%</div>
-          <div class="lbl">储蓄率</div>
-        </div>
-        <div class="score-item">
-          <div class="val c-gold">${fmt(data.totalAssets)}</div>
-          <div class="lbl">总资产</div>
-        </div>
-        <div class="score-item">
-          <div class="val c-blue">${data.yearsToRetire}年</div>
-          <div class="lbl">距退休</div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- 收支KPI -->
-    <div class="simple-kpi-grid">
-      <div class="simple-kpi">
-        <div class="lbl">月收入</div>
-        <div class="val c-green">${fmt(data.totalIncome)}</div>
-        <div class="sub">税后到账</div>
-      </div>
-      <div class="simple-kpi">
-        <div class="lbl">月支出</div>
-        <div class="val c-red">${fmt(data.totalExp)}</div>
-        <div class="sub">生活开支</div>
-      </div>
-      <div class="simple-kpi">
-        <div class="lbl">月储蓄</div>
-        <div class="val c-gold">${fmt(Math.max(0, data.monthlySurplus))}</div>
-        <div class="sub">可用于投资</div>
-      </div>
-    </div>
-    
-    <!-- AI顾问解读 -->
-    <div class="simple-interpret-card">
-      <div class="card-title">
-        <span>🤖</span> AI顾问解读
-        <button onclick="regenerateSimpleInterpret()" style="margin-left:auto;padding:6px 14px;font-size:12px;background:linear-gradient(135deg,var(--gold),var(--gold-light));color:var(--dark);border:none;border-radius:6px;cursor:pointer">
-          重新解读
-        </button>
-      </div>
-      <div class="content" id="sim-interpret-content">${interpretation}</div>
-    </div>
-    
-    <!-- 退休规划 -->
-    <div class="simple-interpret-card">
-      <div class="card-title">
-        <span>🏝️</span> 退休规划
-      </div>
-      <div class="content">${retireStatus}
 
-${retireDetail}</div>
-    </div>
-    
-    <!-- 行动建议 -->
-    <div class="simple-advice-card">
-      <div class="card-title">
-        <span>✅</span> 行动建议
-      </div>
-      ${advices.map(a => `
-        <div class="advice-item">
-          <div class="advice-icon">${a.icon}</div>
-          <div class="advice-content">
-            <div class="advice-title">${a.title}</div>
-            <div class="advice-desc">${a.desc}</div>
+    <!-- 总评分 + 三维度概览 -->
+    <div class="simple-score-card" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:20px">
+        <div style="text-align:center">
+          <div class="score-number" style="color:${scoreGrade.color};font-size:36px">${totalScore}</div>
+          <div class="score-label" style="color:${scoreGrade.color}">${scoreGrade.label}</div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:10px">三维度评分</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+            <div style="text-align:center;padding:8px;background:var(--card2);border-radius:8px">
+              <div style="font-size:16px;margin-bottom:4px">💰</div>
+              <div style="font-size:14px;font-weight:700;color:${savingsColor}">${Math.round(savingsScore)}/40</div>
+              <div style="font-size:10px;color:var(--text3)">储蓄能力</div>
+            </div>
+            <div style="text-align:center;padding:8px;background:var(--card2);border-radius:8px">
+              <div style="font-size:16px;margin-bottom:4px">🏦</div>
+              <div style="font-size:14px;font-weight:700;color:${emergencyColor}">${Math.round(emergencyScore)}/30</div>
+              <div style="font-size:10px;color:var(--text3)">应急储备</div>
+            </div>
+            <div style="text-align:center;padding:8px;background:var(--card2);border-radius:8px">
+              <div style="font-size:16px;margin-bottom:4px">📈</div>
+              <div style="font-size:14px;font-weight:700;color:${resilienceColor}">${Math.round(resilienceScore)}/30</div>
+              <div style="font-size:10px;color:var(--text3)">财务韧性</div>
+            </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ 评分计算详解 ═══════════════ -->
+    <div class="simple-interpret-card">
+      <div class="card-title"><span>🔍</span> 评分计算详解</div>
+
+      <!-- 维度1: 储蓄能力 -->
+      <div style="background:var(--card2);border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span style="font-size:20px">💰</span>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">储蓄能力</div>
+            <div style="font-size:10px;color:var(--text3)">满分 40 分</div>
+          </div>
+          <div style="font-size:18px;font-weight:700;color:${savingsColor}">${Math.round(savingsScore)}</div>
+        </div>
+        <div style="background:var(--bg);border-radius:8px;padding:12px;font-size:11px;line-height:1.9;color:var(--text2);margin-bottom:8px">
+          <div style="color:var(--text3);margin-bottom:4px;font-weight:600">📐 计算过程</div>
+          <div style="display:flex;justify-content:space-between"><span>主动收入</span><span style="color:var(--text)">¥${Math.round(activeIncome).toLocaleString()}/月</span></div>
+          <div style="display:flex;justify-content:space-between"><span>月总支出</span><span style="color:var(--text)">¥${Math.round(totalExp).toLocaleString()}/月</span></div>
+          <div style="display:flex;justify-content:space-between"><span>主动储蓄</span><span style="color:var(--text)">¥${Math.round(Math.max(0, monthlySavings)).toLocaleString()}/月</span></div>
+          <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border2);padding-top:4px;margin-top:4px">
+            <span>主动储蓄率</span>
+            <span style="color:${savingsColor};font-weight:600">${fmtDec(activeSavingsRate * 100)}%</span>
+          </div>
+          <div style="border-top:1px dashed var(--gold);padding-top:4px;margin-top:4px;color:var(--gold);font-weight:600">
+            得分 = ${fmtDec(activeSavingsRate * 100)}% × 40分 = <strong>${Math.round(savingsScore)}分</strong>（${savingsLabel}）
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text2);padding:8px;background:rgba(77,143,255,0.08);border:1px solid rgba(77,143,255,0.2);border-radius:8px">
+          <strong style="color:var(--blue)">💡 为什么这样算？</strong><br>
+          储蓄率反映"赚多少存多少"的能力。储蓄率30%意味着每赚100元存30元。<br>
+          储蓄率越高，财富积累越快。建议储蓄率至少达到20%以上。
+        </div>
+      </div>
+
+      <!-- 维度2: 应急储备 -->
+      <div style="background:var(--card2);border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span style="font-size:20px">🏦</span>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">应急储备</div>
+            <div style="font-size:10px;color:var(--text3)">满分 30 分</div>
+          </div>
+          <div style="font-size:18px;font-weight:700;color:${emergencyColor}">${Math.round(emergencyScore)}</div>
+        </div>
+        <div style="background:var(--bg);border-radius:8px;padding:12px;font-size:11px;line-height:1.9;color:var(--text2);margin-bottom:8px">
+          <div style="color:var(--text3);margin-bottom:4px;font-weight:600">📐 计算过程</div>
+          <div style="display:flex;justify-content:space-between"><span>💵 现金类资产</span><span style="color:var(--text)">¥${Math.round(cashAssets).toLocaleString()}</span></div>
+          <div style="display:flex;justify-content:space-between"><span>月总支出</span><span style="color:var(--text)">¥${Math.round(totalExp).toLocaleString()}/月</span></div>
+          <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border2);padding-top:4px;margin-top:4px">
+            <span>覆盖月数</span>
+            <span style="color:${emergencyColor};font-weight:600">${fmtDec(emergencyMonths)} 个月</span>
+          </div>
+          <div style="border-top:1px dashed var(--gold);padding-top:4px;margin-top:4px;color:var(--gold);font-weight:600">
+            得分 = ${fmtDec(emergencyMonths)} ÷ 6 × 30分 = <strong>${Math.round(emergencyScore)}分</strong>（${emergencyLabel}）
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text2);padding:8px;background:rgba(77,143,255,0.08);border:1px solid rgba(77,143,255,0.2);border-radius:8px;margin-bottom:8px">
+          <strong style="color:var(--blue)">💡 为什么只算现金类？</strong><br>
+          应急资金必须随时可用。股票、基金、房产变现需要时间或可能有损失。<br>
+          6个月是公认的安全标准——足够应对失业、重病等突发情况。
+        </div>
+        <div style="font-size:10px;color:var(--text3);padding:6px 8px;background:var(--bg);border-radius:6px">
+          💵 现金类包括：现金、活期存款、货币基金、余额宝<br>
+          💎 非现金类：定期存款、股票基金、债券、储蓄险、房产、黄金、信托
+        </div>
+      </div>
+
+      <!-- 维度3: 财务韧性 -->
+      <div style="background:var(--card2);border-radius:12px;padding:14px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span style="font-size:20px">📈</span>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">财务韧性</div>
+            <div style="font-size:10px;color:var(--text3)">满分 30 分</div>
+          </div>
+          <div style="font-size:18px;font-weight:700;color:${resilienceColor}">${Math.round(resilienceScore)}</div>
+        </div>
+        <div style="background:var(--bg);border-radius:8px;padding:12px;font-size:11px;line-height:1.9;color:var(--text2);margin-bottom:8px">
+          <div style="color:var(--text3);margin-bottom:4px;font-weight:600">📐 计算过程</div>
+          <div style="display:flex;justify-content:space-between"><span>被动收入</span><span style="color:var(--text)">¥${Math.round(passiveIncome).toLocaleString()}/月</span></div>
+          <div style="display:flex;justify-content:space-between"><span>月总支出</span><span style="color:var(--text)">¥${Math.round(totalExp).toLocaleString()}/月</span></div>
+          <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border2);padding-top:4px;margin-top:4px">
+            <span>被动收入覆盖率</span>
+            <span style="color:${resilienceColor};font-weight:600">${fmtDec(passiveCoverage * 100)}%</span>
+          </div>
+          <div style="border-top:1px dashed var(--gold);padding-top:4px;margin-top:4px;color:var(--gold);font-weight:600">
+            得分 = ${fmtDec(passiveCoverage * 100)}% × 30分 = <strong>${Math.round(resilienceScore)}分</strong>（${resilienceLabel}）
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text2);padding:8px;background:rgba(77,143,255,0.08);border:1px solid rgba(77,143,255,0.2);border-radius:8px">
+          <strong style="color:var(--blue)">💡 为什么被动收入很重要？</strong><br>
+          被动收入是"不工作也能赚的钱"——租金、分红、利息等。<br>
+          覆盖率越高，财务越安全。达到100%时，意味着即使不工作也能维持生活。
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ 退休推演 ═══════════════ -->
+    <div class="simple-interpret-card">
+      <div class="card-title"><span>🏝️</span> 退休规划推演</div>
+
+      <!-- 关键数字 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+        <div style="text-align:center;padding:12px;background:var(--card2);border-radius:10px">
+          <div style="font-size:16px;font-weight:700;color:var(--gold)">¥${Math.round(totalAssets).toLocaleString()}</div>
+          <div style="font-size:10px;color:var(--text3)">当前总资产</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--card2);border-radius:10px">
+          <div style="font-size:16px;font-weight:700;color:${retireNeed > 0 ? 'var(--blue)' : 'var(--text3)'}">¥${retireNeed > 0 ? Math.round(retireNeed).toLocaleString() : '未设定'}</div>
+          <div style="font-size:10px;color:var(--text3)">期望月支出</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--card2);border-radius:10px">
+          <div style="font-size:16px;font-weight:700;color:var(--text2)">${yearsToRetire}年</div>
+          <div style="font-size:10px;color:var(--text3)">距退休</div>
+        </div>
+      </div>
+
+      <!-- 退休时推算 -->
+      <div style="background:linear-gradient(135deg,rgba(201,168,76,0.08),rgba(201,168,76,0.02));border:1px solid rgba(201,168,76,0.3);border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:600;color:var(--gold);margin-bottom:10px">🎯 ${data.age + yearsToRetire}岁退休时预估</div>
+        <div style="background:var(--bg);border-radius:8px;padding:12px;font-size:11px;line-height:1.9;color:var(--text2);margin-bottom:10px">
+          <div style="color:var(--text3);margin-bottom:4px;font-weight:600">📐 计算过程</div>
+          <div style="display:flex;justify-content:space-between"><span>💎 非现金类增值（4%年化）</span><span style="color:var(--text)">¥${Math.round(nonCashAssets).toLocaleString()} → ¥${Math.round(nonCashGrowth).toLocaleString()}</span></div>
+          <div style="display:flex;justify-content:space-between"><span>💵 现金类维持（2%年化）</span><span style="color:var(--text)">¥${Math.round(cashAssets).toLocaleString()} → ¥${Math.round(cashGrowth).toLocaleString()}</span></div>
+          <div style="display:flex;justify-content:space-between"><span>💰 持续储蓄积累（50%投资）</span><span style="color:var(--text)">≈ ¥${Math.round(savingsGrowth).toLocaleString()}</span></div>
+          <div style="border-top:1px solid var(--border2);padding-top:4px;margin-top:4px;display:flex;justify-content:space-between;font-weight:600">
+            <span>预估总资产</span>
+            <span style="color:var(--gold)">¥${Math.round(futureTotalAssets).toLocaleString()}</span>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--text2);padding:8px;background:var(--bg);border-radius:8px;margin-bottom:10px">
+          <strong style="color:var(--blue)">💡 为什么是4%年化？</strong> 这是内地均衡配置的保守中性预测。<br>
+          参考：银行理财3-3.5%、债券/混合基金4-5%，综合加权4%。<br>
+          <span style="color:var(--text3)">数据来源：摩根资管2025报告、中债收益率曲线</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div style="text-align:center;padding:10px;background:var(--bg);border-radius:8px">
+            <div style="font-size:13px;font-weight:700;color:var(--gold)">¥${Math.round(withdrawMonthly).toLocaleString()}/月</div>
+            <div style="font-size:10px;color:var(--text3)">4%提取</div>
+          </div>
+          <div style="text-align:center;padding:10px;background:var(--bg);border-radius:8px">
+            <div style="font-size:13px;font-weight:700;color:var(--blue)">¥${Math.round(passiveIncomeFuture).toLocaleString()}/月</div>
+            <div style="font-size:10px;color:var(--text3)">被动收入（+通胀）</div>
+          </div>
+          <div style="text-align:center;padding:10px;background:var(--bg);border-radius:8px">
+            <div style="font-size:13px;font-weight:700;color:var(--green)">¥${Math.round(retireMonthlyCashFlow).toLocaleString()}/月</div>
+            <div style="font-size:10px;color:var(--text3)">退休月现金流</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 差距分析 -->
+      ${retireNeed > 0 ? `
+      <div style="background:rgba(224,85,85,0.06);border:1px solid rgba(224,85,85,0.2);border-radius:12px;padding:14px">
+        <div style="font-size:12px;font-weight:600;color:${retireNeedStatus.color};margin-bottom:10px">📊 退休资金差距分析</div>
+        <div style="font-size:11px;line-height:1.8">
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border2)">
+            <span style="color:var(--text2)">期望月支出（今日）</span>
+            <span style="color:var(--text)">¥${Math.round(retireNeed).toLocaleString()}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border2)">
+            <span style="color:var(--text2)">退休时等效购买力</span>
+            <span style="color:var(--text)">¥${Math.round(retireNeedFuture).toLocaleString()}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border2)">
+            <span style="color:var(--text2)">预计退休月现金流</span>
+            <span style="color:var(--text)">¥${Math.round(retireMonthlyCashFlow).toLocaleString()}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;margin-top:4px">
+            <span style="font-weight:600">${retireNeedStatus.label}</span>
+            <span style="font-weight:700;color:${retireNeedStatus.color}">${retireNeedStatus.gap > 0 ? '缺口 ¥' + Math.round(retireNeedStatus.gap).toLocaleString() + '/月' : '富余 ¥' + Math.round(Math.abs(retireNeedStatus.gap)).toLocaleString() + '/月'}</span>
+          </div>
+        </div>
+      </div>
+      ` : `
+      <div style="text-align:center;padding:20px;color:var(--text2);font-size:12px;background:var(--card2);border-radius:12px">
+        💡 填写"退休后期望月支出"，获取更准确的退休规划分析
+      </div>
+      `}
+    </div>
+
+    <!-- ═══════════════ 收支明细 ═══════════════ -->
+    <div class="simple-interpret-card">
+      <div class="card-title"><span>💰</span> 月度收支明细</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+        <div style="text-align:center;padding:14px;background:rgba(62,207,142,0.08);border-radius:10px">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:6px">主动收入</div>
+          <div style="font-size:16px;font-weight:700;color:var(--green)">¥${Math.round(activeIncome).toLocaleString()}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">工资/薪金</div>
+        </div>
+        <div style="text-align:center;padding:14px;background:rgba(77,143,255,0.08);border-radius:10px">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:6px">被动收入</div>
+          <div style="font-size:16px;font-weight:700;color:var(--blue)">¥${Math.round(passiveIncome).toLocaleString()}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">租金/分红/利息</div>
+        </div>
+        <div style="text-align:center;padding:14px;background:rgba(224,85,85,0.08);border-radius:10px">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:6px">月支出</div>
+          <div style="font-size:16px;font-weight:700;color:var(--red)">¥${Math.round(totalExp).toLocaleString()}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">生活开支</div>
+        </div>
+      </div>
+      <div style="text-align:center;padding:14px;background:linear-gradient(135deg,rgba(201,168,76,0.1),rgba(201,168,76,0.03));border-radius:10px">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px">主动储蓄</div>
+        <div style="font-size:22px;font-weight:800;color:var(--gold)">¥${Math.round(Math.max(0, monthlySavings)).toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">储蓄率 ${fmtDec(activeSavingsRate * 100)}%（基于主动收入）</div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ 行动建议 ═══════════════ -->
+    <div class="simple-advice-card">
+      <div class="card-title"><span>✅</span> 行动建议</div>
+      ${advices.map((a, i) => `
+        <div style="background:var(--card2);border-radius:12px;padding:14px;margin-bottom:10px;border-left:3px solid ${a.priority === 'high' ? 'var(--red)' : a.priority === 'medium' ? 'var(--gold)' : 'var(--green)'}">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;background:${a.priority === 'high' ? 'rgba(224,85,85,0.2)' : a.priority === 'medium' ? 'rgba(201,168,76,0.2)' : 'rgba(62,207,142,0.2)'};color:${a.priority === 'high' ? 'var(--red)' : a.priority === 'medium' ? 'var(--gold)' : 'var(--green)'}">${a.priority === 'high' ? '🔴 高优先' : a.priority === 'medium' ? '🟡 中优先' : '🟢 建议'}</span>
+            <span style="font-size:13px;font-weight:600">${a.icon} ${a.title}</span>
+          </div>
+          <div style="font-size:12px;color:var(--text2);padding:10px;background:var(--bg);border-radius:8px;margin-bottom:8px;line-height:1.7">
+            ${a.problem}
+            ${a.target ? `<div style="margin-top:6px;color:var(--gold);font-weight:600">→ ${a.target}</div>` : ''}
+          </div>
+          <div style="font-size:11px;color:var(--text3);line-height:1.8">
+            ${a.actions.map((step, si) => `<div style="margin-bottom:2px"><strong style="color:var(--text2)">${si + 1}.</strong> ${step}</div>`).join('')}
+          </div>
+          ${a.effect ? `<div style="font-size:11px;color:var(--green);padding:6px 8px;background:rgba(62,207,142,0.08);border-radius:6px;margin-top:8px">✅ ${a.effect}</div>` : ''}
         </div>
       `).join('')}
     </div>
-    
+
     <!-- 切换提示 -->
-    <div style="text-align:center;padding:20px;background:var(--card2);border-radius:12px;margin-top:20px">
-      <div style="font-size:13px;color:var(--text2);margin-bottom:12px">💡 需要更详细的分析和资产配置建议？</div>
+    <div style="text-align:center;padding:20px;background:var(--card2);border-radius:12px;margin-top:8px">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">💡 需要更详细的资产配置建议和更多功能？</div>
       <button onclick="switchMode('pro')" class="btn btn-gold">切换到专业版 →</button>
     </div>
-    
+
     <!-- 免责声明 -->
     <div style="text-align:center;font-size:11px;color:var(--text2);opacity:.5;padding:16px 0">
       本报告由现金流规划助手简单版生成，仅供参考，不构成投资建议。<br>
       所有数据仅在您的浏览器中处理，不会上传至任何服务器。
     </div>
   `;
-  
+
   document.getElementById('simple-report-content').innerHTML = html;
 }
 
-function generateSimpleInterpret(data, savingsRate, score) {
-  const currency = data.currency;
-  const fmtSymbol = { USD: '$', HKD: 'HK$', CNY: '¥', SGD: 'S$' }[currency] || '¥';
-  const fmt = (num) => fmtSymbol + (num || 0).toLocaleString();
-  
-  // 生成个性化解读
-  let interpret = '';
-  
-  // 储蓄率分析
-  if (savingsRate >= 0.3) {
-    interpret += `🎉 您的储蓄率达到了 ${(savingsRate * 100).toFixed(1)}%，这在中国高净值人群中属于优秀水平！\n\n`;
-    interpret += `每月 ${fmt(data.monthlySurplus)} 的储蓄能力，为您的财富增长奠定了坚实基础。`;
-  } else if (savingsRate >= 0.2) {
-    interpret += `👍 您的储蓄率为 ${(savingsRate * 100).toFixed(1)}%，基本达标。\n\n`;
-    interpret += `每月 ${fmt(data.monthlySurplus)} 的结余，如果能坚持投资复利，长期来看会有不错的积累。`;
-  } else if (savingsRate >= 0.1) {
-    interpret += `📊 您的储蓄率为 ${(savingsRate * 100).toFixed(1)}%，有提升空间。\n\n`;
-    interpret += `建议审视每月开支，看看能否将储蓄率提升到 20% 以上。`;
-  } else {
-    interpret += `⚠️ 您的储蓄率偏低（月储蓄 ${fmt(data.monthlySurplus)}），需要重点关注开支管理。\n\n`;
-    interpret += `建议先从控制非必要开支开始，逐步提升储蓄率。`;
-  }
-  
-  // 资产分析
-  if (data.totalAssets > 0) {
-    const monthsOfAssets = data.totalAssets / data.totalExp;
-    if (monthsOfAssets >= 12) {
-      interpret += `\n\n🏦 您的总资产 ${fmt(data.totalAssets)} 可覆盖 ${Math.floor(monthsOfAssets)} 个月支出，紧急预备金较为充足。`;
-    } else if (monthsOfAssets >= 6) {
-      interpret += `\n\n💰 您的资产可覆盖约 ${Math.floor(monthsOfAssets)} 个月支出，建议继续积累至 12 个月。`;
-    } else {
-      interpret += `\n\n⚡ 建议优先积累 3-6 个月的紧急预备金（约 ${fmt(data.totalExp * 3)}-${fmt(data.totalExp * 6)}）。`;
-    }
-  } else {
-    interpret += `\n\n📝 建议记录您的资产情况，便于更好地规划财务目标。`;
-  }
-  
-  // 风险偏好建议
-  const riskLabels = {
-    conservative: '保守型',
-    moderate: '稳健型',
-    growth: '成长型',
-    aggressive: '激进型'
-  };
-  interpret += `\n\n🎯 您属于 ${riskLabels[data.riskPref]} 投资者，建议根据风险偏好选择合适的投资产品。`;
-  
-  return interpret;
-}
-
-function regenerateSimpleInterpret() {
-  const data = simCollectData();
-  const savingsRate = data.totalIncome > 0 ? data.monthlySurplus / data.totalIncome : 0;
-  let score = 50;
-  if (savingsRate >= 0.3) score += 25;
-  else if (savingsRate >= 0.2) score += 15;
-  else if (savingsRate >= 0.1) score += 5;
-  else if (savingsRate < 0) score -= 20;
-  if (data.totalAssets >= data.totalExp * 6) score += 15;
-  else if (data.totalAssets >= data.totalExp * 3) score += 10;
-  if (data.totalAssets >= data.totalIncome * 12) score += 10;
-  else if (data.totalAssets >= data.totalIncome * 6) score += 5;
-  score = Math.min(100, Math.max(0, score));
-  
-  const interpretation = generateSimpleInterpret(data, savingsRate, score);
-  document.getElementById('sim-interpret-content').innerHTML = interpretation;
-}
-
-function generateSimpleAdvices(data, savingsRate) {
-  const advices = [];
-  
-  // 紧急预备金建议
-  if (data.totalAssets < data.totalExp * 6) {
-    advices.push({
-      icon: '🏦',
-      title: '建立紧急预备金',
-      desc: `建议先积累 ${Math.ceil(data.totalExp * 6 / 10000) * 10000} 元，覆盖 6 个月支出。优先选择高流动性的货币基金或定期存款。`
-    });
-  }
-  
-  // 储蓄率建议
-  if (savingsRate < 0.2) {
-    advices.push({
-      icon: '💰',
-      title: '提升储蓄率至 20%+',
-      desc: '建议每月先储蓄后消费，将储蓄自动化。可以考虑减少非必要开支或增加收入来源。'
-    });
-  } else {
-    advices.push({
-      icon: '✅',
-      title: '保持储蓄习惯',
-      desc: '您的储蓄率良好，建议将每月结余的 50% 用于投资增值，50% 继续积累。'
-    });
-  }
-  
-  // 退休规划建议
-  if (data.retireNeed > 0) {
-    const monthlyNeeded = data.retireNeed;
-    const currentSurplus = data.monthlySurplus;
-    if (currentSurplus > 0 && monthlyNeeded > currentSurplus * 0.5) {
-      advices.push({
-        icon: '🏝️',
-        title: '关注退休规划',
-        desc: `退休后期望月支出 ${monthlyNeeded} 元，建议通过储蓄险或指数基金建立被动收入。`
-      });
-    }
-  }
-  
-  // 保险建议
-  advices.push({
-    icon: '🛡️',
-    title: '配置基础保障',
-    desc: '建议配置医疗险和意外险，每年保费控制在年收入的 5-10%，转移重大风险。'
-  });
-  
-  return advices.slice(0, 4); // 最多4条建议
-}
+// 旧函数已移除（功能整合到 renderSimpleReport 中）
+// generateSimpleInterpret、regenerateSimpleInterpret、generateSimpleAdvices
 
 function validateStep1() {
   const name = v('s-name').trim();
