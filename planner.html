@@ -715,6 +715,12 @@ function simGenerateReport() {
 
 // ── 将简单版数据转换为专业版格式 ──
 function convertSimpleToProFormat(simpleData) {
+  // 计算总支出
+  const totalExp = simpleData.totalExp || simpleData.expense || 0;
+  // 计算月度结余
+  const monthlySurplus = simpleData.monthlySurplus || simpleData.savings || 
+    (simpleData.totalIncome - totalExp) || 0;
+  
   return {
     id: simpleData.id, // 如果有的话
     name: simpleData.name,
@@ -745,16 +751,20 @@ function convertSimpleToProFormat(simpleData) {
     passiveIncome: simpleData.passiveIncome,
     
     // 支出（简化）
-    housing: Math.round((simpleData.totalExp * 0.3) / 12) || 0,    // 估算30%用于住房
+    housing: Math.round((totalExp * 0.3) / 12) || 0,    // 估算30%用于住房
     propertyFee: 0,
-    daily: Math.round((simpleData.totalExp * 0.4) / 12) || 0,      // 估算40%用于日常
-    transport: Math.round((simpleData.totalExp * 0.1) / 12) || 0,   // 估算10%用于交通
-    medical: Math.round((simpleData.totalExp * 0.1) / 12) || 0,    // 估算10%用于医疗
+    daily: Math.round((totalExp * 0.4) / 12) || 0,      // 估算40%用于日常
+    transport: Math.round((totalExp * 0.1) / 12) || 0,   // 估算10%用于交通
+    medical: Math.round((totalExp * 0.1) / 12) || 0,    // 估算10%用于医疗
     education: 0,
     premiumExp: 0,
     debtExp: 0,
-    flexExp: Math.round((simpleData.totalExp * 0.1) / 12) || 0,    // 估算10%弹性支出
+    flexExp: Math.round((totalExp * 0.1) / 12) || 0,    // 估算10%弹性支出
     otherExp: 0,
+    
+    // 用于加载时显示
+    totalExp: totalExp,
+    monthlySurplus: monthlySurplus,
     
     // 目标
     retireNeed: simpleData.retireNeed,
@@ -1439,6 +1449,33 @@ function loadClientToForm(clientId) {
     const data = client.raw;
     currentClientId = clientId;
 
+    // 检测是否是简单版数据
+    const isSimple = data.isSimple || data.mode === 'simple';
+    
+    if (isSimple) {
+      // 填充简单版表单
+      switchMode('simple');
+      
+      el('sim-name').value = data.name || '';
+      el('sim-age').value = data.age || '';
+      el('sim-risk').value = data.riskPref || 'moderate';
+      el('sim-currency').value = data.currency || 'CNY';
+      el('sim-active-income').value = data.activeIncome || '';
+      el('sim-passive-income').value = data.passiveIncome || '';
+      el('sim-expense').value = data.totalExp || '';
+      el('sim-savings').value = data.monthlySurplus || '';
+      el('sim-cash-assets').value = data.cash || '';
+      el('sim-non-cash-assets').value = (data.alternatives || 0) + (data.stocks || 0) + (data.property || 0);
+      el('sim-retire').value = data.retireAge || 60;
+      el('sim-retire-expense').value = data.retireNeed || '';
+      
+      toast(`已加载客户档案：${data.name}`);
+      return true;
+    }
+
+    // 填充专业版表单
+    switchMode('pro');
+    
     // 填充基本信息
     el('s-name').value = data.name || '';
     el('s-age').value = data.age || '';
